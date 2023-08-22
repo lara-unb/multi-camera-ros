@@ -1,0 +1,25 @@
+<launch>
+    <arg name="ns"      default="$(env HOSTNAME)" />
+    <param name="/namespace"    value="$(arg ns)" />
+
+    <group ns="$(arg ns)">
+        <!-- Define Args -->
+        <arg name="finish_by_time"      default="true"/>
+        <arg name="time_to_finish_s"    default="10.0"/>
+        <arg name="bt_output"           default="true"/>
+
+        <!-- Set Params -->
+        <param name="/finish_by_time"   value="$(arg finish_by_time)" />
+        <param name="/time_to_finish_s"   value="$(arg time_to_finish_s)" />
+        <param name="/finish_action"    value="false" />
+        <param name="/wait_for_ros"     value="true" />
+        <param name="/project"          value="NONE" />
+        <param name="/simulation"       value="true" />
+        <!-- <param name="/cancel_tree"      value="false" /> -->
+
+     
+    </group>
+
+    <include file="$(find multicom)/launch/client.launch" />
+
+</launch>
