@@ -1,0 +1,4 @@
+- Commit python script to git hub 
+- Check  launch multitab terminal on the python script 
+- Calibrate the usb cameras 
+- test setup with 2 usb cameras 
