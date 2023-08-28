@@ -12,7 +12,7 @@
         <param name="image_is_rectified" value="True"/>
         <param name="marker_size"        value="$(arg markerSize)"/>
         <param name="reference_frame"    value="$(arg ref_frame)"/>   <!-- frame in which the marker pose will be refered -->
-        <param name="camera_frame"       value="$(arg cam_id) kinectic"/>
+        <param name="camera_frame"       value="$(arg cam_id)"/>
         <param name="marker_frame" value="$(arg marker_frame)" />
         <param name="corner_refinement" value="$(arg corner_refinement)" />
     </node>
