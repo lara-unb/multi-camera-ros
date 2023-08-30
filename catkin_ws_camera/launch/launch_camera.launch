@@ -10,7 +10,7 @@
             <arg name="device_id" value="$(arg kinect_device_id)"/>
         </include>
         
-        <include file="/home/ur3/catkin_ws_camera/launch/marker_publisher.launch">
+        <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
             <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
         </include>
     </group>
@@ -29,7 +29,7 @@
                 <param name="io_method" value="mmap"/>
             </node>
             
-            <include file="/home/ur3/catkin_ws_camera/launch/marker_publisher.launch">
+            <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
                 <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
             </include>
         </group>

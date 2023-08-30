@@ -35,14 +35,14 @@ for device in devices:
 # Launching Camera Nodes based on camera type 
 if not error_flag:
     cam_id = 1
-    os.system("gnome-terminal -- roscore")
+    os.system("gnome-terminal --tab --title='rosocore' -- roscore")
     time.sleep(1)
     for kinect_id in range(1, num_kinect + 1):
-        os.system(f"gnome-terminal -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=kinect device_id:={kinect_id}")
+        os.system(f"gnome-terminal --tab -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=kinect device_id:={kinect_id}")
         time.sleep(1)
         cam_id = cam_id + 1
     for usb_cam_id in range(1, num_usb_cam + 1):
-        os.system(f"gnome-terminal -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=usb_cam device_id:={usb_cam_id}")
+        os.system(f"gnome-terminal --tab -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=usb_cam device_id:={usb_cam_id}")
         time.sleep(1)
         cam_id = cam_id + 1
 
