@@ -1,0 +1,35 @@
+[35m[1mScanning dependencies of target stereo_view[0m
+[  5%] [32mBuilding CXX object CMakeFiles/stereo_view.dir/src/nodes/stereo_view.cpp.o[0m
+[35m[1mScanning dependencies of target disparity_view[0m
+[ 11%] [32mBuilding CXX object CMakeFiles/disparity_view.dir/src/nodes/disparity_view.cpp.o[0m
+[ 17%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/disparity_view[0m
+[ 17%] Built target disparity_view
+[35m[1mScanning dependencies of target image_view_gencfg[0m
+[ 23%] [34m[1mGenerating dynamic reconfigure files from cfg/ImageView.cfg: /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/include/image_view/ImageViewConfig.h /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/python3/dist-packages/image_view/cfg/ImageViewConfig.py[0m
+Generating reconfiguration files for ImageView in image_view
+Wrote header file in /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/include/image_view/ImageViewConfig.h
+[ 23%] Built target image_view_gencfg
+[ 29%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/stereo_view[0m
+[ 29%] Built target stereo_view
+[35m[1mScanning dependencies of target video_recorder[0m
+[ 35%] [32mBuilding CXX object CMakeFiles/video_recorder.dir/src/nodes/video_recorder.cpp.o[0m
+[ 41%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/video_recorder[0m
+[ 41%] Built target video_recorder
+[35m[1mScanning dependencies of target extract_images[0m
+[ 47%] [32mBuilding CXX object CMakeFiles/extract_images.dir/src/nodes/extract_images.cpp.o[0m
+[35m[1mScanning dependencies of target image_saver[0m
+[ 52%] [32mBuilding CXX object CMakeFiles/image_saver.dir/src/nodes/image_saver.cpp.o[0m
+[ 58%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/extract_images[0m
+[ 64%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/image_saver[0m
+[ 64%] Built target extract_images
+[35m[1mScanning dependencies of target image_view_exe[0m
+[ 70%] [32mBuilding CXX object CMakeFiles/image_view_exe.dir/src/nodes/image_view.cpp.o[0m
+[35m[1mScanning dependencies of target image_view[0m
+[ 76%] [32mBuilding CXX object CMakeFiles/image_view.dir/src/nodelets/image_nodelet.cpp.o[0m
+[ 76%] Built target image_saver
+[ 82%] [32mBuilding CXX object CMakeFiles/image_view.dir/src/nodelets/disparity_nodelet.cpp.o[0m
+[ 88%] [32mBuilding CXX object CMakeFiles/image_view.dir/src/nodelets/window_thread.cpp.o[0m
+[ 94%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/image_view/image_view[0m
+[ 94%] Built target image_view_exe
+[100%] [32m[1mLinking CXX shared library /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/image_view/lib/libimage_view.so[0m
+[100%] Built target image_view

@@ -1,0 +1,13 @@
+[35m[1mScanning dependencies of target depth_image_proc[0m
+[  9%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/convert_metric.cpp.o[0m
+[ 18%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/crop_foremost.cpp.o[0m
+[ 27%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/disparity.cpp.o[0m
+[ 36%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyz.cpp.o[0m
+[ 45%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyzrgb.cpp.o[0m
+[ 54%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyzi.cpp.o[0m
+[ 63%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyz_radial.cpp.o[0m
+[ 72%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyzi_radial.cpp.o[0m
+[ 81%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/point_cloud_xyzrgb_radial.cpp.o[0m
+[ 90%] [32mBuilding CXX object CMakeFiles/depth_image_proc.dir/src/nodelets/register.cpp.o[0m
+[100%] [32m[1mLinking CXX shared library /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/depth_image_proc/lib/libdepth_image_proc.so[0m
+[100%] Built target depth_image_proc

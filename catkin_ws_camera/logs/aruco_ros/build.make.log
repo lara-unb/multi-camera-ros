@@ -1,0 +1,146 @@
+[35m[1mScanning dependencies of target tf2_msgs_generate_messages_nodejs[0m
+[  0%] Built target tf2_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target aruco_ros_gencfg[0m
+[  8%] [34m[1mGenerating dynamic reconfigure files from cfg/ArucoThreshold.cfg: /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/include/aruco_ros/ArucoThresholdConfig.h /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/lib/python3/dist-packages/aruco_ros/cfg/ArucoThresholdConfig.py[0m
+Generating reconfiguration files for ArucoThreshold in aruco_ros
+Wrote header file in /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/include/aruco_ros/ArucoThresholdConfig.h
+[35m[1mScanning dependencies of target visualization_msgs_generate_messages_py[0m
+[  8%] Built target visualization_msgs_generate_messages_py
+[35m[1mScanning dependencies of target visualization_msgs_generate_messages_nodejs[0m
+[  8%] Built target aruco_ros_gencfg
+[  8%] Built target visualization_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target visualization_msgs_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target visualization_msgs_generate_messages_eus[0m
+[  8%] Built target visualization_msgs_generate_messages_lisp
+[  8%] Built target visualization_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target aruco_msgs_generate_messages_py[0m
+[35m[1mScanning dependencies of target aruco_msgs_generate_messages_nodejs[0m
+[  8%] Built target aruco_msgs_generate_messages_py
+[  8%] Built target aruco_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target roscpp_generate_messages_eus[0m
+[35m[1mScanning dependencies of target aruco_msgs_generate_messages_eus[0m
+[  8%] Built target roscpp_generate_messages_eus
+[  8%] Built target aruco_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target dynamic_reconfigure_gencfg[0m
+[35m[1mScanning dependencies of target std_msgs_generate_messages_lisp[0m
+[  8%] Built target dynamic_reconfigure_gencfg
+[  8%] Built target std_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target sensor_msgs_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target std_msgs_generate_messages_nodejs[0m
+[  8%] Built target sensor_msgs_generate_messages_cpp
+[  8%] Built target std_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target std_msgs_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target geometry_msgs_generate_messages_eus[0m
+[  8%] Built target std_msgs_generate_messages_cpp
+[  8%] Built target geometry_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target dynamic_reconfigure_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target tf2_msgs_generate_messages_cpp[0m
+[  8%] Built target dynamic_reconfigure_generate_messages_lisp
+[  8%] Built target tf2_msgs_generate_messages_cpp
+[35m[1mScanning dependencies of target geometry_msgs_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target tf_generate_messages_cpp[0m
+[  8%] Built target geometry_msgs_generate_messages_lisp
+[  8%] Built target tf_generate_messages_cpp
+[35m[1mScanning dependencies of target roscpp_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target actionlib_generate_messages_lisp[0m
+[  8%] Built target roscpp_generate_messages_lisp
+[  8%] Built target actionlib_generate_messages_lisp
+[35m[1mScanning dependencies of target roscpp_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target geometry_msgs_generate_messages_py[0m
+[  8%] Built target roscpp_generate_messages_cpp
+[  8%] Built target geometry_msgs_generate_messages_py
+[35m[1mScanning dependencies of target tf2_msgs_generate_messages_eus[0m
+[35m[1mScanning dependencies of target sensor_msgs_generate_messages_py[0m
+[  8%] Built target sensor_msgs_generate_messages_py
+[  8%] Built target tf2_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target sensor_msgs_generate_messages_nodejs[0m
+[35m[1mScanning dependencies of target visualization_msgs_generate_messages_cpp[0m
+[  8%] Built target sensor_msgs_generate_messages_nodejs
+[  8%] Built target visualization_msgs_generate_messages_cpp
+[35m[1mScanning dependencies of target sensor_msgs_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target sensor_msgs_generate_messages_eus[0m
+[  8%] Built target sensor_msgs_generate_messages_eus
+[  8%] Built target sensor_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target tf_generate_messages_eus[0m
+[35m[1mScanning dependencies of target rosgraph_msgs_generate_messages_lisp[0m
+[  8%] Built target tf_generate_messages_eus
+[  8%] Built target rosgraph_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target dynamic_reconfigure_generate_messages_py[0m
+[35m[1mScanning dependencies of target actionlib_msgs_generate_messages_eus[0m
+[  8%] Built target dynamic_reconfigure_generate_messages_py
+[  8%] Built target actionlib_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target rosgraph_msgs_generate_messages_py[0m
+[35m[1mScanning dependencies of target std_msgs_generate_messages_py[0m
+[35m[1mScanning dependencies of target dynamic_reconfigure_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target tf_generate_messages_lisp[0m
+[  8%] Built target rosgraph_msgs_generate_messages_py
+[  8%] Built target std_msgs_generate_messages_py
+[  8%] Built target dynamic_reconfigure_generate_messages_cpp
+[  8%] Built target tf_generate_messages_lisp
+[35m[1mScanning dependencies of target geometry_msgs_generate_messages_nodejs[0m
+[35m[1mScanning dependencies of target dynamic_reconfigure_generate_messages_eus[0m
+[35m[1mScanning dependencies of target geometry_msgs_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target dynamic_reconfigure_generate_messages_nodejs[0m
+[  8%] Built target geometry_msgs_generate_messages_nodejs
+[  8%] Built target geometry_msgs_generate_messages_cpp
+[  8%] Built target dynamic_reconfigure_generate_messages_eus
+[  8%] Built target dynamic_reconfigure_generate_messages_nodejs
+[35m[1mScanning dependencies of target tf2_msgs_generate_messages_py[0m
+[35m[1mScanning dependencies of target roscpp_generate_messages_nodejs[0m
+[35m[1mScanning dependencies of target roscpp_generate_messages_py[0m
+[  8%] Built target tf2_msgs_generate_messages_py
+[  8%] Built target roscpp_generate_messages_nodejs
+[35m[1mScanning dependencies of target rosgraph_msgs_generate_messages_eus[0m
+[  8%] Built target roscpp_generate_messages_py
+[35m[1mScanning dependencies of target rosgraph_msgs_generate_messages_nodejs[0m
+[  8%] Built target rosgraph_msgs_generate_messages_eus
+[35m[1mScanning dependencies of target actionlib_generate_messages_cpp[0m
+[  8%] Built target rosgraph_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target actionlib_msgs_generate_messages_py[0m
+[  8%] Built target actionlib_generate_messages_cpp
+[35m[1mScanning dependencies of target aruco_msgs_generate_messages_lisp[0m
+[  8%] Built target actionlib_msgs_generate_messages_py
+[35m[1mScanning dependencies of target tf_generate_messages_nodejs[0m
+[  8%] Built target aruco_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target rosgraph_msgs_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target actionlib_generate_messages_eus[0m
+[  8%] Built target tf_generate_messages_nodejs
+[  8%] Built target actionlib_generate_messages_eus
+[  8%] Built target rosgraph_msgs_generate_messages_cpp
+[35m[1mScanning dependencies of target actionlib_msgs_generate_messages_cpp[0m
+[35m[1mScanning dependencies of target actionlib_generate_messages_nodejs[0m
+[35m[1mScanning dependencies of target actionlib_generate_messages_py[0m
+[  8%] Built target actionlib_msgs_generate_messages_cpp
+[  8%] Built target actionlib_generate_messages_nodejs
+[  8%] Built target actionlib_generate_messages_py
+[35m[1mScanning dependencies of target std_msgs_generate_messages_eus[0m
+[35m[1mScanning dependencies of target tf_generate_messages_py[0m
+[35m[1mScanning dependencies of target actionlib_msgs_generate_messages_nodejs[0m
+[  8%] Built target std_msgs_generate_messages_eus
+[  8%] Built target tf_generate_messages_py
+[  8%] Built target actionlib_msgs_generate_messages_nodejs
+[35m[1mScanning dependencies of target actionlib_msgs_generate_messages_lisp[0m
+[35m[1mScanning dependencies of target aruco_msgs_generate_messages_cpp[0m
+[  8%] Built target aruco_msgs_generate_messages_cpp
+[35m[1mScanning dependencies of target tf2_msgs_generate_messages_lisp[0m
+[  8%] Built target actionlib_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target double[0m
+[35m[1mScanning dependencies of target single[0m
+[  8%] Built target tf2_msgs_generate_messages_lisp
+[35m[1mScanning dependencies of target aruco_ros_utils[0m
+[ 16%] [32mBuilding CXX object CMakeFiles/aruco_ros_utils.dir/src/aruco_ros_utils.cpp.o[0m
+[ 25%] [32mBuilding CXX object CMakeFiles/single.dir/src/simple_single.cpp.o[0m
+[ 33%] [32mBuilding CXX object CMakeFiles/double.dir/src/simple_double.cpp.o[0m
+[ 41%] [32mBuilding CXX object CMakeFiles/double.dir/src/aruco_ros_utils.cpp.o[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/single.dir/src/aruco_ros_utils.cpp.o[0m
+[ 58%] [32m[1mLinking CXX shared library /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/lib/libaruco_ros_utils.so[0m
+[ 58%] Built target aruco_ros_utils
+[35m[1mScanning dependencies of target marker_publisher[0m
+[ 66%] [32mBuilding CXX object CMakeFiles/marker_publisher.dir/src/marker_publish.cpp.o[0m
+[ 75%] [32mBuilding CXX object CMakeFiles/marker_publisher.dir/src/aruco_ros_utils.cpp.o[0m
+[ 83%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/lib/aruco_ros/double[0m
+[ 83%] Built target double
+[ 91%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/lib/aruco_ros/single[0m
+[ 91%] Built target single
+[100%] [32m[1mLinking CXX executable /home/ur3/multi-camera-ros/catkin_ws_camera/devel/.private/aruco_ros/lib/aruco_ros/marker_publisher[0m
+[100%] Built target marker_publisher

@@ -1,0 +1,12 @@
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/include/stereo_image_proc/DisparityConfig.h
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/libstereo_image_proc.so
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/pkgconfig/stereo_image_proc.pc
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/stereo_image_proc/stereo_image_proc
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/python3/dist-packages/stereo_image_proc/__init__.py
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/python3/dist-packages/stereo_image_proc/cfg/__init__.py
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/lib/python3/dist-packages/stereo_image_proc/cfg/DisparityConfig.py
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/share/stereo_image_proc/cmake/stereo_image_procConfig.cmake
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/share/stereo_image_proc/cmake/stereo_image_procConfig-version.cmake
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/share/stereo_image_proc/docs/DisparityConfig.wikidoc
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/share/stereo_image_proc/docs/DisparityConfig-usage.dox
+Symlinking /home/ur3/multi-camera-ros/catkin_ws_camera/devel/share/stereo_image_proc/docs/DisparityConfig.dox
