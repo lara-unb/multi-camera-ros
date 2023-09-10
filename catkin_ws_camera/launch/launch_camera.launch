@@ -10,9 +10,12 @@
             <arg name="device_id" value="$(arg kinect_device_id)"/>
         </include>
         
-        <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
-            <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
-        </include>
+        <group ns = "camera">
+            <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
+                <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
+            </include>
+        </group>    
+    
     </group>
 
     <group ns="$(eval 'cam_' + str(arg('cam_id')))" if="$(eval arg('cam_type') == 'usb_cam')">
