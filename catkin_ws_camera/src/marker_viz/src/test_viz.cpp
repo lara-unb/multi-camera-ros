@@ -1,33 +1,47 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
-#include "aruco_ros_utils.h"
 #include <tf/transform_broadcaster.h>
 #include <vector>
+#include "marker_viz.h"
+
 int main( int argc, char** argv )
 {
+  // ROS node configuration
   ros::init(argc, argv, "test_viz");
   ros::NodeHandle n;
   ros::Rate r(30);
   ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("visualization_marker_array", 1);
-  
+  int x = 1000;
   // Set our initial shape type to be a cube
   uint32_t shape = visualization_msgs::Marker::CUBE;
   
-  // Setting first camera reference frame in the origin 
+  // Setting the cameras reference frame in the origin 
   tf::TransformBroadcaster br;
-  std::vector<tf::Transform> tf_cameras;
-  tf_cameras.push_back(tf::Transform());
+  std::vector<Camera> cameras;
   visualization_msgs::MarkerArray arr;
-  int pei = 1000;
+  std::vector<std::string>topics = get_camera_topics(); 
   
+  for(int i = 0; i < topics.size(); i++){
+    std::string id = "cam_" + std::to_string(i+1);
+    cameras.push_back(Camera(tf::Vector3(i,i,i), tf::Quaternion(0,0,0,1),"cam_" + std::to_string(i+1)));
+  }
+  
+  // Node Loop
   while (ros::ok())
   {
     arr.markers.clear();
-    tf_cameras.at(0).setOrigin(tf::Vector3(0,0,0));
-    tf_cameras.at(0).setRotation(tf::Quaternion(0,0,0,1)); 
-    br.sendTransform(tf::StampedTransform(tf_cameras.at(0), ros::Time::now(),"map", "cam_1"));
     
+    for(int i = 0; i < cameras.size(); i++){
+      if(x){
+        br.sendTransform(cameras.at(i).get_stamped_tf());
+        x--;
+      }
+      br.sendTransform(cameras.at(0).get_stamped_tf());
+    
+      
+    }
+  
     
     visualization_msgs::Marker marker;
     visualization_msgs::Marker marker_2;
@@ -78,10 +92,9 @@ int main( int argc, char** argv )
     marker_2.pose.position.y = 1.0;
     marker_2.lifetime = ros::Duration(60);
     
-    if(pei > 0){
-      arr.markers.push_back(marker_2);
-      pei--;
-    }
+    
+    arr.markers.push_back(marker_2);
+    
       
    
     arr.markers.push_back(marker);

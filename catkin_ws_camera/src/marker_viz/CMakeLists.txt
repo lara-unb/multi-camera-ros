@@ -144,7 +144,7 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
 add_executable(test_viz src/test_viz.cpp)
 
-
+add_library(marker_viz src/marker_viz.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -160,7 +160,7 @@ add_executable(test_viz src/test_viz.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(test_viz ${catkin_LIBRARIES})
+target_link_libraries(test_viz marker_viz ${catkin_LIBRARIES} )
 
 #############
 ## Install ##
