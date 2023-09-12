@@ -1,3 +1,5 @@
+> This tutorial is prepared for an environment of a Ubuntu 20.04. If you want to use on a different Ubuntu version, you need to change everything that containts 'noetic' to the apropriate correspondent.
+
 To prepare the environment, you have to individually install freenect ros lib manually. The overall process is quite simple so you just have to do the following steps:
 
 Installing some dependencies:
