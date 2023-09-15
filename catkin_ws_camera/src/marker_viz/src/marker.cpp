@@ -47,3 +47,7 @@ Marker::Marker(){
 visualization_msgs::Marker Marker::get_marker(){
     return marker;
 }
+
+tf::StampedTransform Marker::get_tf(){
+    return tf::StampedTransform(tf, ros::Time::now(),parent_frame, "m_" + std::to_string(marker.id));
+}

@@ -17,7 +17,7 @@ class Marker{
         // Marker(visualization_msgs::Marker marker_shape, std::string frame_id);
         // Marker(tf::Transform marker_tf, std::string frame_id);
 
-        // tf::StampedTransform get_tf();
+        tf::StampedTransform get_tf();
         // void set_tf(tf::Vector3 tr, tf::Quaternion rot);
         visualization_msgs::Marker get_marker();
 };
