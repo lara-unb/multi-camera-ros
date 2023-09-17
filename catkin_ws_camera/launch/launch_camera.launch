@@ -11,7 +11,7 @@
         </include>
         
         <group ns = "camera">
-            <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
+            <include file="./launch/marker_publisher.launch">
                 <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
             </include>
         </group>    
@@ -32,7 +32,7 @@
                 <param name="io_method" value="mmap"/>
             </node>
             
-            <include file="/home/ur3/multi-camera-ros/catkin_ws_camera/launch/marker_publisher.launch">
+            <include file="./launch/marker_publisher.launch">
                 <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
             </include>
         </group>
