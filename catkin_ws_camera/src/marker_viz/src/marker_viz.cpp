@@ -38,7 +38,6 @@ void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
         marker_candidate.set_pose(marker_candidate.get_tf().inverse());  
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
-            ROS_INFO_STREAM("marker ind:  " << marker_index );
             sys_markers.at(marker_index).set_marker(marker_candidate);
         }
         else{ //Marker not found: Add to the list of markers 

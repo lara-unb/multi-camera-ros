@@ -2,9 +2,6 @@
 #include "marker_viz.h"
 #include <vector>
 
-// Library effective with Linux
-// #include <unistd.h>
-
 
 int main(int argc, char** argv){
   
@@ -21,7 +18,7 @@ int main(int argc, char** argv){
   
   for(int i = 0; i < topics.size(); i++){
     std::string camera_id = topics.at(i).substr(1,5); // get the "cam_x" token for the respecitve camera from topic path
-    vh.add_camera(Camera(tf::Vector3(i,i,i), tf::Quaternion(0,0,0,1),camera_id), topics.at(i));
+    vh.add_camera(Camera(tf::Vector3(i,i,i), tf::Quaternion(0.5,0.5,0.5,0.5),camera_id), topics.at(i)); // Rotate rviz camera axes to coincide with aruco axes
   }
 
   // Node Loop
