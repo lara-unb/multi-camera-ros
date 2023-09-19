@@ -35,6 +35,23 @@ void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
     for(int i = 0; i < msg.markers.size(); i++){
         VisualizationMarker marker_candidate = VisualizationMarker(msg.markers.at(i));
         // Inverts transformation of coordinates to marker->camera to camera->marker for visualization 
+        auto new_pose = marker_candidate.get_tf();
+        // std::cout <<"Rot(Before): " << "      x: " <<  new_pose.getRotation().x() <<
+        //                         "      y: " << new_pose.getRotation().y() <<
+        //                         "       z: " << new_pose.getRotation().z() <<
+        //                         "      w: " << new_pose.getRotation().w() << std::endl;
+        
+        new_pose.setRotation(tf::Quaternion(
+            new_pose.getRotation().x(),
+            -new_pose.getRotation().y(),
+            new_pose.getRotation().z(),
+            -new_pose.getRotation().w()));
+
+        // std::cout <<"Rot(After): " << "      x: " <<  new_pose.getRotation().x() <<
+        //                         "      y: " << new_pose.getRotation().y() <<
+        //                         "      z: " << new_pose.getRotation().z() <<
+        //                         "      w: " << new_pose.getRotation().w() << std::endl;
+        
         marker_candidate.set_pose(marker_candidate.get_tf().inverse());  
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
@@ -94,8 +111,7 @@ std::vector<std::string> get_camera_topics(){
     ros::master::getTopics(master_topics);
     std::string marker_topic_name("/aruco_marker_publisher/markers");
     std::vector<std::string>topics;
-    
-    
+
     for (ros::master::V_TopicInfo::iterator it = master_topics.begin() ; it != master_topics.end(); it++) {
         const ros::master::TopicInfo& info = *it;
         if(info.name.find(marker_topic_name) != std::string::npos){
@@ -106,4 +122,3 @@ std::vector<std::string> get_camera_topics(){
     }
     return topics; 
 }
-
