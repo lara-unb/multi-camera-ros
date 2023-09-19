@@ -107,11 +107,11 @@ void VisualizationMarker::set_marker(VisualizationMarker m){
 
 void VisualizationMarker::set_pose(tf::Transform new_pose){
     tf = new_pose;
-    marker.pose.position.x = new_pose.getOrigin().getX();
-    marker.pose.position.y = new_pose.getOrigin().getY();
-    marker.pose.position.z = new_pose.getOrigin().getZ();
-    marker.pose.orientation.x = new_pose.getRotation().getAxis().getX();
-    marker.pose.orientation.y = new_pose.getRotation().getAxis().getY();
-    marker.pose.orientation.z = new_pose.getRotation().getAxis().getX();
-    marker.pose.orientation.w = new_pose.getRotation().getW();
+    marker.pose.position.x = new_pose.getOrigin().x();
+    marker.pose.position.y = new_pose.getOrigin().y();
+    marker.pose.position.z = new_pose.getOrigin().z();
+    marker.pose.orientation.x = new_pose.getRotation().x();
+    marker.pose.orientation.y = new_pose.getRotation().y();
+    marker.pose.orientation.z = new_pose.getRotation().z();
+    marker.pose.orientation.w = new_pose.getRotation().w();
 }
