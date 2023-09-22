@@ -2,19 +2,19 @@
 
 VisualizationMarker::VisualizationMarker(){
     marker = visualization_msgs::Marker();
-    
+
     // Setting the marker initial parameters 
     marker.header.stamp = ros::Time::now();
     marker.lifetime = ros::Duration(2);
     int marker_id = 0;
     parent_frame = "cam_1";
-    
+
     // Set the namespace and id for this marker.  This serves to create a unique ID
     marker.header.frame_id = parent_frame;
     marker.id = marker_id;
     marker.ns = marker.header.frame_id + "_m_" + std::to_string(marker.id); 
     marker.type = visualization_msgs::Marker::CUBE;
-    
+
     // Set the pose of the marker. 
     marker.pose.position.x = 0;
     marker.pose.position.y = 0;
@@ -23,7 +23,7 @@ VisualizationMarker::VisualizationMarker(){
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    
+
     // Set the scale of the marker -
     marker.scale.x = 0.5;
     marker.scale.y = 0.5;
@@ -41,22 +41,21 @@ VisualizationMarker::VisualizationMarker(){
     tf  = tf::Transform(rot, tr);
 }
 
-
 VisualizationMarker::VisualizationMarker(aruco_msgs::Marker m){
     marker = visualization_msgs::Marker();
-    
+
     // Setting the marker initial parameters 
     marker.header.stamp = ros::Time::now();
     marker.lifetime = ros::Duration(2);
     int marker_id = m.id;
     parent_frame = m.header.frame_id;
-    
+
     // Set the namespace and id for this marker.  This serves to create a unique ID
     marker.header.frame_id = parent_frame;
     marker.id = marker_id;
     marker.ns = marker.header.frame_id + "_m_" + std::to_string(marker.id); 
     marker.type = visualization_msgs::Marker::CUBE;
-    
+
     // Set the pose of the marker. 
     marker.pose.position.x = m.pose.pose.position.x;
     marker.pose.position.y = m.pose.pose.position.y;
@@ -65,7 +64,7 @@ VisualizationMarker::VisualizationMarker(aruco_msgs::Marker m){
     marker.pose.orientation.y = m.pose.pose.orientation.y;
     marker.pose.orientation.z = m.pose.pose.orientation.z;
     marker.pose.orientation.w = m.pose.pose.orientation.w;
-    
+
     // Set the scale of the marker -
     marker.scale.x = 0.5;
     marker.scale.y = 0.5;
