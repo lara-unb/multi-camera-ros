@@ -34,25 +34,12 @@ void VisualizationHandler::clear_markers(){
 void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
     for(int i = 0; i < msg.markers.size(); i++){
         VisualizationMarker marker_candidate = VisualizationMarker(msg.markers.at(i));
-        // Inverts transformation of coordinates to marker->camera to camera->marker for visualization 
+        // Fix Aruco pose results to RVIZ
         auto new_pose = marker_candidate.get_tf();
-        // std::cout <<"Rot(Before): " << "      x: " <<  new_pose.getRotation().x() <<
-        //                         "      y: " << new_pose.getRotation().y() <<
-        //                         "       z: " << new_pose.getRotation().z() <<
-        //                         "      w: " << new_pose.getRotation().w() << std::endl;
-        
-        new_pose.setRotation(tf::Quaternion(
-            new_pose.getRotation().x(),
-            -new_pose.getRotation().y(),
-            new_pose.getRotation().z(),
-            -new_pose.getRotation().w()));
-
-        // std::cout <<"Rot(After): " << "      x: " <<  new_pose.getRotation().x() <<
-        //                         "      y: " << new_pose.getRotation().y() <<
-        //                         "      z: " << new_pose.getRotation().z() <<
-        //                         "      w: " << new_pose.getRotation().w() << std::endl;
-        
-        marker_candidate.set_pose(marker_candidate.get_tf().inverse());  
+        tf::Quaternion rot = tf::Quaternion(0, 0, 1, 0); // Rotate z axis in 180 degrees
+        tf::Transform rot_tf = tf::Transform(rot); 
+        new_pose = rot_tf * new_pose;
+        marker_candidate.set_pose(new_pose);  
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
             sys_markers.at(marker_index).set_marker(marker_candidate);

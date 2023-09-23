@@ -18,12 +18,12 @@ int main(int argc, char** argv){
   
   for(int i = 0; i < topics.size(); i++){
     std::string camera_id = topics.at(i).substr(1,5); // get the "cam_x" token for the respecitve camera from topic path
-    vh.add_camera(Camera(tf::Vector3(i,i,i), tf::Quaternion(0.5,0.5,0.5,0.5),camera_id), topics.at(i)); // Rotate rviz camera axes to coincide with aruco axes
+    vh.add_camera(Camera(tf::Vector3(0,0,i), tf::Quaternion(0.5,0.5,0.5,0.5),camera_id), topics.at(i)); // Rotate rviz camera axes to coincide with aruco axes
   }
 
   // Node Loop
   while (ros::ok()){
-    // vh.clear_markers();
+    vh.clear_markers();
     vh.send_tfs();
     vh.publish_markers();
     ros::spinOnce();
