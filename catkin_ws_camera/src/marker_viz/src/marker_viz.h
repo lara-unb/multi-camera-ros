@@ -34,6 +34,7 @@ class VisualizationHandler{
 };
 
 std::vector<std::string> get_camera_topics();
-
+tf::Matrix3x3  get_rot_from_quat(tf::Quaternion q);
+tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r);
 
 #endif
