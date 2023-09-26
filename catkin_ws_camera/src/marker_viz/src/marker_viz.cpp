@@ -112,62 +112,68 @@ std::vector<std::string> get_camera_topics(){
 
 //Converts Quaternion to Rotation Matrix (3x3)
 // From Ken Shoemake's article "Quaternion Calculus and Fast Animation" 
-tf::Matrix3x3  get_rot_from_quat(tf::Quaternion q){
-    float norm = q.x()*q.x() + q.y()*q.y() + q.z()*q.z() + q.w()*q.w();
-    float s = (norm >= 0) ? 2.0/norm : 0.0;
+// tf::Matrix3x3  get_rot_from_quat(tf::Quaternion q){
+//     float norm = q.x()*q.x() + q.y()*q.y() + q.z()*q.z() + q.w()*q.w();
+//     float s = (norm >= 0) ? 2.0/norm : 0.0;
     
-    float r_xx = 1 - s*(q.y()*q.y() + q.z()*q.z());
-    float r_xy = s*(q.x()*q.y() - q.w()*q.z());
-    float r_xz = s*(q.x()*q.z() + q.w()*q.y());
+//     float r_xx = 1 - s*(q.y()*q.y() + q.z()*q.z());
+//     float r_xy = s*(q.x()*q.y() - q.w()*q.z());
+//     float r_xz = s*(q.x()*q.z() + q.w()*q.y());
     
-    float r_yx = s*(q.x()*q.z() + q.w()*q.z());
-    float r_yy = 1 - s*(q.x()*q.x() + q.z()*q.z());
-    float r_yz = s*(q.y()*q.z() - q.w()*q.x());
+//     float r_yx = s*(q.x()*q.z() + q.w()*q.z());
+//     float r_yy = 1 - s*(q.x()*q.x() + q.z()*q.z());
+//     float r_yz = s*(q.y()*q.z() - q.w()*q.x());
 
-    float r_zx = s*(q.x()*q.z() - q.w()*q.y());
-    float r_zy = s*(q.y()*q.z() + q.w()*q.x());
-    float r_zz = 1 - s*(q.x()*q.x() + q.y()*q.y());
+//     float r_zx = s*(q.x()*q.z() - q.w()*q.y());
+//     float r_zy = s*(q.y()*q.z() + q.w()*q.x());
+//     float r_zz = 1 - s*(q.x()*q.x() + q.y()*q.y());
 
-    return tf::Matrix3x3(r_xx, r_xy, r_xz, r_yx, r_yy, r_yz, r_zx, r_zy, r_zz); 
-}
+//     return tf::Matrix3x3(r_xx, r_xy, r_xz, r_yx, r_yy, r_yz, r_zx, r_zy, r_zz); 
+// }
 
 //Converts Rotation Matrix (3x3) to Quaternion
 // From Ken Shoemake's article "Quaternion Calculus and Fast Animation" 
-tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r){
-    float rot[3][3];
+// tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r){
+//     float rot[3][3];
 
-    float rot[0][0] = r[0].x(); // rxx
-    float rot[0][1]= r[0].y(); // rxy
-    float rot[0][2] = r[0].z();// rxz
+//     float rot[0][0] = r[0].x(); // rxx
+//     float rot[0][1]= r[0].y(); // rxy
+//     float rot[0][2] = r[0].z();// rxz
     
-    float rot[1][0] = r[1].x(); // ryx
-    float rot[1][1] = r[1].y(); // ryy
-    float rot[1][2] = r[1].z(); // ryz
+//     float rot[1][0] = r[1].x(); // ryx
+//     float rot[1][1] = r[1].y(); // ryy
+//     float rot[1][2] = r[1].z(); // ryz
 
-    float rot[2][0] = r[2].x(); // rzx
-    float rot[2][1] = r[2].y(); // rzy
-    float rot[2][2] = r[2].z(); // rzz
+//     float rot[2][0] = r[2].x(); // rzx
+//     float rot[2][1] = r[2].y(); // rzy
+//     float rot[2][2] = r[2].z(); // rzz
 
-    float tr = rot[0][0] + rot[1][1] + rot[2][2];
-    float q_x,q_y,q_z,q_w;
-    
-    if(tr >= 0.0){
-        float s = std::sqrt(tr + 1.0);
-        float q_w = s*0.5;
-        s = 0.5/s;
-        float q_x = (rot[2][1] - rot[1][2])*s;
-        float q_y = (rot[0][2] - rot[2][0])*s;
-        float q_z = (rot[1][0] - rot[0][1])*s;
-    }
-    else {
-        int h = 0;
-        if(rot[1][1] > rot[0][0]){
-            h = 1;
-        }
-        if (rot[2][2] > rot[h][h]){
-            h = 2;
-        }
-    }
+//     float tr = rot[0][0] + rot[1][1] + rot[2][2];
+//     float q_x,q_y,q_z,q_w;
+//     tf::Quaternion q;
+//     if(tr >= 0.0){
+//         float s = std::sqrt(tr + 1.0);
+//         float q_w = s*0.5;
+//         s = 0.5/s;
+//         float q_x = (rot[2][1] - rot[1][2])*s;
+//         float q_y = (rot[0][2] - rot[2][0])*s;
+//         float q_z = (rot[1][0] - rot[0][1])*s;
+//         q = tf::Quaternion(q_x, q_y, q_z, q_w);
+//     }
+//     else {
+//         int i = 0;
+//         if(rot[1][1] > rot[0][0]){
+//             i = 1;
+//         }
+//         if (rot[2][2] > rot[i][i]){
+//             i = 2;
+//         }
+//         int j = (i+1)%3; //1
+//         int k = (j+1)%3; // 2
+
+//         s = sqrt(rot[i][i] - rot[j][j] - rot[k][k] + 1.0);
+//         float q_coords[4]; 
+//     }
 
 
-}
+// }

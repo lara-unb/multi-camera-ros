@@ -142,10 +142,10 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
-add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
-add_library(camera src/camera.cpp)
-add_library(marker_viz src/marker_viz.cpp)
-add_library(visualization_marker src/visualization_marker.cpp)
+# add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
+# add_library(camera src/camera.cpp)
+# add_library(marker_viz src/marker_viz.cpp)
+# add_library(visualization_marker src/visualization_marker.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,11 +161,8 @@ add_library(visualization_marker src/visualization_marker.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(test_viz 
-                      camera
-                      marker_viz
-                      ${catkin_LIBRARIES}
-                      visualization_marker)
+# 
+
 
 #############
 ## Install ##
