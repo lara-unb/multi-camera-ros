@@ -1,8 +1,8 @@
-#include <Eigen/Dense>
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Eigen>
 
-#ifndef KalmanFilterClass
-#define KalmanFilterClass
+#ifndef KALMAN_FILTER_H
+#define KALMAN_FILTER_H
 
 //	TIME UPDATE EQUATIONS
 //	X[k] = A * X[k-1] + w[k1]							// Predict a state based on the process stochastic model
@@ -17,6 +17,8 @@
 //	X[k] = X[k] + K[k] * (Y[k] - H * X[k])				// after measuring Y[k], calculating a posteriori state estimate
 //	P[k] = (I - K[k] * H) * P[k]						// Calculate a posteriori error covariance estimate
 
+#define ARBITRARY_INITIAL_COVARIANCE 1
+
 class filter{
 
 	public:
@@ -29,12 +31,12 @@ class filter{
 		Eigen::MatrixXd X; 	// State vector
 		Eigen::MatrixXd P; 	// Covariance matrix
 		Eigen::MatrixXd K;	// Kalman filter gain
-		Eigen::MatrixXd Z_pred; // Predicted output
-		Eigen::MatrixXd I_pred; // Predicterd measurement innovation/residual
-		Eigen::MatrixXd Z_cor;	// Corrected output
+		Eigen::MatrixXd Y_pred; // Predicted output
+		Eigen::MatrixXd Y_cor;	// Corrected output
 		Eigen::MatrixXd I_cor;	// Corrected measurement innovation/residual
+		Eigen::MatrixXd I_pred; // Predicterd measurement innovation/residual
 
-		void setDimensions(int Nx, int Nu, int Ny){
+		void setDimensions(int Nx, int Ny){
 			A.setIdentity(Nx, Nx);
 			H.resize(Ny, Nx);
 			Q.resize(Nx, Nx);
@@ -48,37 +50,42 @@ class filter{
 			K.resize(Nx, Ny);
 		}
 
+		void initNormalDist(int kQ, int kR){
+			Q = Eigen::MatrixXd::Identity(Q.rows(), Q.rows()) * kQ;
+			R = Eigen::MatrixXd::Identity(R.rows(), R.rows()) * kR;
+		}
+
 		void reset(){
 			X = X0;
-			P = P0;
+			P = P0 * ARBITRARY_INITIAL_COVARIANCE;
 		}
 
 		void predict(){
 			// Predicst state vector
-			X = A * X
+			X = A * X;
 
 			// Predicts Covariance error matrix
 			P = A * P * A.transpose() + Q;
-
-			// Predicts the output Y with the predicted X
-			Z_pred = H * X;
-
-			//Calculates prediction error (also called measurement innovation or residual)
-			I_pred = Y - Y_pred;
 		}
 
 		void correct(Eigen::MatrixXd& Y){
+			// Predicts the output Y with the predicted X
+			Y_pred = H * X;
+
+			//Calculates prediction error (also called measurement innovation or residual)
+			I_pred = Y - Y_pred;
+
 			// Kalman gain
 			K = P * H.transpose() * (H * P * H.transpose() + R).inverse();
 
 			// Updates estimated state matrix with Kalman gain and estimated output error
-			X = X + K * V_pred;
+			X = X + K * I_pred;
 
 			// Updating covariance error matrix with Kalman gaind and old covariance error matrix
 			P = (Eigen::MatrixXd::Identity(X.rows(), X.rows()) - K * H) * P;
 
 			// New prediction of output
-			Z_cor = H * X;
+			Y_cor = H * X;
 
 			// New error of output
 			I_cor = Y - Y_cor;
@@ -86,10 +93,10 @@ class filter{
 
 		Eigen::MatrixXd getState() { return X; }
 		Eigen::MatrixXd getCovariance() { return P; }
-		Eigen::MatrixXd getPredictedOutput() { return Z_pred; }
-		Eigen::MatrixXd getCorrectedOutput() { return Z_cor; }
-		Eigen::MatrixXd getPredictedOutputError() { return I_pred; }
-		Eigen::MatrixXd getCorrectedOutputError() { return I_cor; }
+		Eigen::MatrixXd getPredictedOutput() { return Y_pred; }
+		Eigen::MatrixXd getCorrectedOutput() { return Y_cor; }
+		Eigen::MatrixXd getPredictedInnovation() { return I_pred; }
+		Eigen::MatrixXd getCorrectedInnovation() { return I_cor; }
 };
 
 #endif
