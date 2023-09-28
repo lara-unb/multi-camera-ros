@@ -40,6 +40,10 @@ Now, to use the aruco markers ros package do the following:
 
 `sudo apt-get install ros-noetic-aruco-ros`
 
+Make sure you have installed the Eigen3 lib so the Kalman filter can work. Do the following:
+
+`sudo apt-get install libeigen3-dev`
+
 With those libs installed, you can build the entire environment together from the workspace folder. To do that, run the following commands:
 
 `cd ~/catkin_ws/`
