@@ -1,5 +1,6 @@
 // Example in your ROS node
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <aruco_msgs/MarkerArray.h>
 #include <geometry_msgs/PoseWithCovariance.h>
 #include <tf/transform_broadcaster.h>
@@ -40,6 +41,7 @@ class ros_filter{
         ros_filter(){
             // Prepare the filter by defining the initial dimension
             kf.set_dimensions(0);
+            ROS_INFO("Starting kalman filter aruco node");
         }
 
         // Find all aruco marker publisher topics for each camera
@@ -90,7 +92,7 @@ class ros_filter{
 
         // Callback to handle marker data from different cameras
         void cameraCallback(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id) {
-
+            ROS_INFO_STREAM("Kalman filter callback called");
             // Insert the markers detected in the system
 
             for (const auto& marker : msg->markers){
@@ -132,7 +134,6 @@ class ros_filter{
 
                 }else{
                     // The marker is new
-                    tracked_poses++;
                     trackedMarker auxMarker;
                     auxMarker.arucoId = markerTagId;
                     auxMarker.stateVectorAddr = tracked_poses * POSE_VECTOR_SIZE;
@@ -140,34 +141,52 @@ class ros_filter{
                     auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
 
                     cam_markers[camera_id].push_back(auxMarker);
+                    tracked_poses++;
                 }
             }
 
             // Adapt the filter for the new data/change of state vector size
-
+            ROS_INFO_STREAM("Kalman filter callback: starting kalman filter play");
             Eigen::VectorXd oldState = kf.getState();
-            oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
+            ROS_INFO_STREAM("2");
+
+            // Verifying if there is a need to extend the state vector (new states)
+            if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE){
+                ROS_INFO_STREAM("RESIZING state VECTOR");
+                oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
+                kf.insertState(oldState);
+            }
+
+            ROS_INFO_STREAM("3");
+
             Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
+            ROS_INFO("cam_marker size: %lu", cam_markers.size());
 
             for(const auto& pair : cam_markers){
                 for(const auto& marker : pair.second){
+                    ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
                     newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = marker.pose;
                 }
             }
 
             // Filter the data
-
-            kf.insertState(oldState);
+            ROS_INFO_STREAM("5");
             kf.predict();
+            ROS_INFO_STREAM("6");
             kf.correct(newState);
+            ROS_INFO_STREAM("7");
 
             // Retrieve the filtered data from the Kalman filter (kf)
             Eigen::VectorXd filtered_states = kf.getState();
+            ROS_INFO_STREAM("8");
             Eigen::MatrixXd covariance_matrix = kf.getCovariance();
+            ROS_INFO_STREAM("9");
 
             // Construct the to-be-published data structure
             aruco_msgs::MarkerArray filtered_markers_msg;
             filtered_markers_msg.markers.reserve(cam_markers[camera_id].size());
+
+            ROS_INFO_STREAM("a");
 
             for (const auto& marker : cam_markers[camera_id]) {
                 aruco_msgs::Marker filtered_marker;
@@ -177,6 +196,8 @@ class ros_filter{
                 // Extract the filtered data corresponding to this marker
                 if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= filtered_states.size()) {
                     Eigen::VectorXd marker_pose = filtered_states.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE);
+
+            ROS_INFO_STREAM("b");
 
                     // Create a geometry_msgs::Pose message from the filtered pose data
                     geometry_msgs::Pose filtered_pose;
@@ -193,16 +214,25 @@ class ros_filter{
                     // Populate the filtered_marker.pose.covariance with the covariance matrix
                     filtered_marker.pose.covariance.fill(0.0); // Initialize to zero    
 
+                    ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());
+                    ROS_INFO("filtered_marker.pose.covariance_size: %ld", filtered_marker.pose.covariance.size());
+
                     // Extract the corresponding covariance matrix for this marker
-                    if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows() &&
-                        marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols()) {
-                        for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
-                            for (int j = 0; j < POSE_VECTOR_SIZE; ++j) {
-                                filtered_marker.pose.covariance[i * POSE_VECTOR_SIZE + j] =
+                    // adding the '-1' part is important because the covariance matrix is 7x7 and the last row and cols relate to the
+                    // imaginary 'w' rotation which is not really meaningful, and the output is a 6x6 matrix by the format 
+                    // specified in geometry_msgs
+
+                    if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows() -1 &&
+                        marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols() -1) {
+                        for (int i = 0; i < POSE_VECTOR_SIZE -1; ++i) {
+                            for (int j = 0; j < POSE_VECTOR_SIZE-1; ++j) {
+                                filtered_marker.pose.covariance[i * POSE_VECTOR_SIZE -1 + j] =
                                     covariance_matrix(marker.stateVectorAddr + i, marker.stateVectorAddr + j);
                             }
                         }
                     }
+
+            ROS_INFO_STREAM("c");
 
                     filtered_markers_msg.markers.push_back(filtered_marker);
                 }
@@ -210,6 +240,7 @@ class ros_filter{
 
             // Publish the filtered marker data
             if (filtered_marker_publishers.find(camera_id) != filtered_marker_publishers.end()) {
+                ROS_INFO("Kalman filter publishing!");
                 filtered_marker_publishers[camera_id].publish(filtered_markers_msg);
             }
         }
@@ -222,11 +253,13 @@ class ros_filter{
 };
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "marker_data_processor");
+    ros::init(argc, argv, "kalman_aruco");
 
     ros_filter filter;
 
+    ROS_INFO_STREAM("Kalman filter on!");
     filter.getCameraTopics();
+    filter.subscribeTopics();
 
     ros::spin();
 

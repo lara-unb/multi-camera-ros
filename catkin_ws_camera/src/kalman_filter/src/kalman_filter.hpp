@@ -97,7 +97,7 @@ class filter{
 			P = A * P * A.transpose() + Q;
 		}
 
-		void correct(Eigen::VectorXd& Y){
+		void correct(Eigen::VectorXd Y){
 			// Predicts the output Y with the predicted X
 			Y_pred = H * X;
 
