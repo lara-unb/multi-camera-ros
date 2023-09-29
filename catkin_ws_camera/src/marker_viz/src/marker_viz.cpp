@@ -39,7 +39,8 @@ void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
         tf::Quaternion rot = tf::Quaternion(0, 0, 1, 0); // Rotate z axis in 180 degrees
         tf::Transform rot_tf = tf::Transform(rot); 
         new_pose = rot_tf * new_pose;
-        marker_candidate.set_pose(new_pose);  
+        marker_candidate.set_pose(new_pose); 
+        // test_quaternion(marker_candidate.get_tf().getRotation());
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
             sys_markers.at(marker_index).set_marker(marker_candidate);
@@ -110,70 +111,107 @@ std::vector<std::string> get_camera_topics(){
     return topics; 
 }
 
-//Converts Quaternion to Rotation Matrix (3x3)
+// Converts Quaternion to Rotation Matrix (3x3)
 // From Ken Shoemake's article "Quaternion Calculus and Fast Animation" 
-// tf::Matrix3x3  get_rot_from_quat(tf::Quaternion q){
-//     float norm = q.x()*q.x() + q.y()*q.y() + q.z()*q.z() + q.w()*q.w();
-//     float s = (norm >= 0) ? 2.0/norm : 0.0;
+tf::Matrix3x3  get_rot_from_quat(tf::Quaternion q){
+    float norm = q.x()*q.x() + q.y()*q.y() + q.z()*q.z() + q.w()*q.w();
+    float s = (norm >= 0) ? 2.0/norm : 0.0;
     
-//     float r_xx = 1 - s*(q.y()*q.y() + q.z()*q.z());
-//     float r_xy = s*(q.x()*q.y() - q.w()*q.z());
-//     float r_xz = s*(q.x()*q.z() + q.w()*q.y());
+    float r_xx = 1 - s*(q.y()*q.y() + q.z()*q.z());
+    float r_xy = s*(q.x()*q.y() - q.w()*q.z());
+    float r_xz = s*(q.x()*q.z() + q.w()*q.y());
     
-//     float r_yx = s*(q.x()*q.z() + q.w()*q.z());
-//     float r_yy = 1 - s*(q.x()*q.x() + q.z()*q.z());
-//     float r_yz = s*(q.y()*q.z() - q.w()*q.x());
+    float r_yx = s*(q.x()*q.y() + q.w()*q.z());
+    float r_yy = 1 - s*(q.x()*q.x() + q.z()*q.z());
+    float r_yz = s*(q.y()*q.z() - q.w()*q.x());
 
-//     float r_zx = s*(q.x()*q.z() - q.w()*q.y());
-//     float r_zy = s*(q.y()*q.z() + q.w()*q.x());
-//     float r_zz = 1 - s*(q.x()*q.x() + q.y()*q.y());
+    float r_zx = s*(q.x()*q.z() - q.w()*q.y());
+    float r_zy = s*(q.y()*q.z() + q.w()*q.x());
+    float r_zz = 1 - s*(q.x()*q.x() + q.y()*q.y());
 
-//     return tf::Matrix3x3(r_xx, r_xy, r_xz, r_yx, r_yy, r_yz, r_zx, r_zy, r_zz); 
-// }
+    return tf::Matrix3x3(r_xx, r_xy, r_xz, r_yx, r_yy, r_yz, r_zx, r_zy, r_zz); 
+}
 
-//Converts Rotation Matrix (3x3) to Quaternion
+// Converts Rotation Matrix (3x3) to Quaternion
 // From Ken Shoemake's article "Quaternion Calculus and Fast Animation" 
-// tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r){
-//     float rot[3][3];
+tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r){
+    float rot[3][3];
 
-//     float rot[0][0] = r[0].x(); // rxx
-//     float rot[0][1]= r[0].y(); // rxy
-//     float rot[0][2] = r[0].z();// rxz
+    rot[0][0] = r[0].x(); // rxx
+    rot[0][1]= r[0].y(); // rxy
+    rot[0][2] = r[0].z();// rxz
     
-//     float rot[1][0] = r[1].x(); // ryx
-//     float rot[1][1] = r[1].y(); // ryy
-//     float rot[1][2] = r[1].z(); // ryz
+    rot[1][0] = r[1].x(); // ryx
+    rot[1][1] = r[1].y(); // ryy
+    rot[1][2] = r[1].z(); // ryz
 
-//     float rot[2][0] = r[2].x(); // rzx
-//     float rot[2][1] = r[2].y(); // rzy
-//     float rot[2][2] = r[2].z(); // rzz
+    rot[2][0] = r[2].x(); // rzx
+    rot[2][1] = r[2].y(); // rzy
+    rot[2][2] = r[2].z(); // rzz
 
-//     float tr = rot[0][0] + rot[1][1] + rot[2][2];
-//     float q_x,q_y,q_z,q_w;
-//     tf::Quaternion q;
-//     if(tr >= 0.0){
-//         float s = std::sqrt(tr + 1.0);
-//         float q_w = s*0.5;
-//         s = 0.5/s;
-//         float q_x = (rot[2][1] - rot[1][2])*s;
-//         float q_y = (rot[0][2] - rot[2][0])*s;
-//         float q_z = (rot[1][0] - rot[0][1])*s;
-//         q = tf::Quaternion(q_x, q_y, q_z, q_w);
-//     }
-//     else {
-//         int i = 0;
-//         if(rot[1][1] > rot[0][0]){
-//             i = 1;
-//         }
-//         if (rot[2][2] > rot[i][i]){
-//             i = 2;
-//         }
-//         int j = (i+1)%3; //1
-//         int k = (j+1)%3; // 2
+    float tr = rot[0][0] + rot[1][1] + rot[2][2];
+   
+    if(tr >= 0.0){
+        float q_x,q_y,q_z,q_w;
+        float s = std::sqrt(tr + 1.0);
+        q_w = s*0.5;
+        s = 0.5/s;
+        q_x = (rot[2][1] - rot[1][2])*s;
+        q_y = (rot[0][2] - rot[2][0])*s;
+        q_z = (rot[1][0] - rot[0][1])*s;
+        return tf::Quaternion(q_x, q_y, q_z, q_w);
+    }
+    else {
+        int i = 0;
+        float q[4]; 
+        if(rot[1][1] > rot[0][0]){
+            i = 1;
+        }
+        if (rot[2][2] > rot[i][i]){
+            i = 2;
+        }
+        int j = (i+1)%3; 
+        int k = (j+1)%3;      
+        float s = sqrt(rot[i][i] - rot[j][j] - rot[k][k] + 1.0);
+        q[i] = s*0.5;
+        s = 0.5/s;
+        q[j] = (rot[i][j] + rot[j][i]) * s;
+        q[k] = (rot[k][i] + rot[i][k]) * s;
+        q[3] = (rot[k][j] - rot[j][k]) * s;
+        return tf::Quaternion(q[0], q[1], q[2], q[3]);
+    }
+}
 
-//         s = sqrt(rot[i][i] - rot[j][j] - rot[k][k] + 1.0);
-//         float q_coords[4]; 
-//     }
-
-
-// }
+//Quaternion verification routine 
+void test_quaternion(tf::Quaternion q){
+        
+    auto rot = get_rot_from_quat(q); 
+    auto converted_q = get_quat_from_rot(rot);
+    tf::Vector3 point = tf::Vector3(1,-1,2); // Random point to test rotation 
+    tf::Quaternion point_q = tf::Quaternion(point.x(), point.y(), point.z(), 0); //Point expressed as quaternion
+    tf::Quaternion q_inverse = q.inverse(); 
+    
+    std::cout << "q (Original):"
+    <<"             x= " << q.x()
+    << " y= " << q.y() 
+    << " z = " << q.z()
+    << " w= " << q.w() << std::endl;
+    
+    std::cout << "q (from Rotation Matrix):"
+    << " x= " << converted_q.x()
+    << " y= " << converted_q.y() 
+    << " z = " << converted_q.z()
+    << " w= " << converted_q.w() << std::endl;
+        
+    std::cout << "Rotation (from Rotation Matrix):" 
+    << "     x= " << rot.tdotx(point)
+    << " y= " << rot.tdoty(point)
+    << " z= " << rot.tdotz(point) << std::endl;
+    
+    q *= point_q;
+    q*= q_inverse;
+    std::cout << "Rotation (from Original Quaternion):" 
+    << " x= " << q.x()
+    << " y= " << q.y()
+    << " z= " << q.z() << std::endl;
+}
