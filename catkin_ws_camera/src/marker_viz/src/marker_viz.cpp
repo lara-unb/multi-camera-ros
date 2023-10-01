@@ -40,7 +40,6 @@ void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
         tf::Transform rot_tf = tf::Transform(rot); 
         new_pose = rot_tf * new_pose;
         marker_candidate.set_pose(new_pose); 
-        // test_quaternion(marker_candidate.get_tf().getRotation());
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
             sys_markers.at(marker_index).set_marker(marker_candidate);
@@ -57,7 +56,7 @@ void VisualizationHandler::add_camera(Camera camera, std::string topic){
     bool flag_repeated_value = false;
     for(int i  = 0; i < sys_cameras.size(); i++){
         if(sys_cameras.at(i) == camera){
-            flag_repeated_value = false;
+            flag_repeated_value = true;
             ROS_WARN("Camera already exists in the system");
         }
     }
@@ -182,14 +181,10 @@ tf::Quaternion get_quat_from_rot(tf::Matrix3x3 r){
     }
 }
 
-//Quaternion verification routine 
+//Quaternion conversion verification routine 
 void test_quaternion(tf::Quaternion q){
-        
-    auto rot = get_rot_from_quat(q); 
-    auto converted_q = get_quat_from_rot(rot);
-    tf::Vector3 point = tf::Vector3(1,-1,2); // Random point to test rotation 
-    tf::Quaternion point_q = tf::Quaternion(point.x(), point.y(), point.z(), 0); //Point expressed as quaternion
-    tf::Quaternion q_inverse = q.inverse(); 
+
+    auto converted_q = get_quat_from_rot(get_rot_from_quat(q));
     
     std::cout << "q (Original):"
     <<"             x= " << q.x()
@@ -202,16 +197,5 @@ void test_quaternion(tf::Quaternion q){
     << " y= " << converted_q.y() 
     << " z = " << converted_q.z()
     << " w= " << converted_q.w() << std::endl;
-        
-    std::cout << "Rotation (from Rotation Matrix):" 
-    << "     x= " << rot.tdotx(point)
-    << " y= " << rot.tdoty(point)
-    << " z= " << rot.tdotz(point) << std::endl;
-    
-    q *= point_q;
-    q*= q_inverse;
-    std::cout << "Rotation (from Original Quaternion):" 
-    << " x= " << q.x()
-    << " y= " << q.y()
-    << " z= " << q.z() << std::endl;
+
 }

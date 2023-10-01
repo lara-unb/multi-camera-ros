@@ -142,7 +142,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
-add_executable(test_viz src/test_viz.cpp)
+add_executable(visualization_node src/visualization_node.cpp)
 add_library(camera src/camera.cpp)
 add_library(marker_viz src/marker_viz.cpp)
 add_library(visualization_marker src/visualization_marker.cpp)
@@ -161,7 +161,7 @@ add_library(visualization_marker src/visualization_marker.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(test_viz 
+target_link_libraries(visualization_node 
                       camera
                       marker_viz
                       ${catkin_LIBRARIES}
