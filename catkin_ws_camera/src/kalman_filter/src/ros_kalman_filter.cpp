@@ -154,6 +154,7 @@ class ros_filter{
             if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE){
                 ROS_INFO_STREAM("RESIZING state VECTOR");
                 oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
+                oldState.tail(POSE_VECTOR_SIZE).setZero();
                 ROS_INFO("conservative resize done");
                 kf.insertState(oldState);
             }
@@ -202,7 +203,7 @@ class ros_filter{
                     filtered_marker.pose.pose = filtered_pose;
 
                     // Populate the filtered_marker.pose.covariance with the covariance matrix
-                    filtered_marker.pose.covariance.fill(0.0); // Initialize to zero    
+                    filtered_marker.pose.covariance.fill(0.0); // Initialize to zero
 
                     #if DEBUG == true
                     ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());

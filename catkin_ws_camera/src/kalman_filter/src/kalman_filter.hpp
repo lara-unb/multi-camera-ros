@@ -1,5 +1,6 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Eigen>
+#include <ros/ros.h>
 
 #ifndef KALMAN_FILTER_H
 #define KALMAN_FILTER_H
@@ -8,8 +9,8 @@
 #define LINEAR_VECTOR_SIZE 3
 #define ANGULAR_VECTOR_SIZE 4
 #define HIGH_COVARIANCE_PRESET 0.1
-#define PROCESS_LINEAR_NOISE_COVARIANCE 0.01
-#define PROCESS_ANGULAR_NOISE_COVARIANCE 0.000001
+#define PROCESS_LINEAR_NOISE_COVARIANCE 0.1
+#define PROCESS_ANGULAR_NOISE_COVARIANCE 0.001
 
 //	TIME UPDATE EQUATIONS
 //	X[k] = A * X[k-1] + w[k1]							// Predict a state based on the process stochastic model
@@ -44,29 +45,48 @@ class filter{
 		Eigen::VectorXd I_pred; // Predicterd measurement innovation/residual
 
 		void set_dimensions(int dim){
-			X.conservativeResize(dim);
-			X0.conservativeResize(dim);
-			P.conservativeResize(dim, dim);
-			P0.conservativeResize(dim, dim);
+			X.resize(dim);
+			X0.resize(dim);
+			P.resize(dim, dim);
+			P.setZero();
+			P0.resize(dim, dim);
+			P0.setIdentity() * HIGH_COVARIANCE_PRESET;
 			A.setIdentity(dim, dim);
 			H.setIdentity(dim, dim);
-			Q.conservativeResize(dim, dim);
-			Q0.conservativeResize(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
-			Q0.topLeftCorner(LINEAR_VECTOR_SIZE, LINEAR_VECTOR_SIZE) = Eigen::MatrixXd::Identity(LINEAR_VECTOR_SIZE, LINEAR_VECTOR_SIZE) * PROCESS_LINEAR_NOISE_COVARIANCE;
-			Q0.bottomRightCorner(ANGULAR_VECTOR_SIZE, ANGULAR_VECTOR_SIZE) = Eigen::MatrixXd::Identity(ANGULAR_VECTOR_SIZE, ANGULAR_VECTOR_SIZE) * PROCESS_ANGULAR_NOISE_COVARIANCE;
-			R.conservativeResize(dim, dim);
+			Q.resize(dim, dim);
+			Q0.resize(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
+			Q0.setZero();
+
+			for(int i = 0; i < Q0.rows(); i++){
+				if(i % POSE_VECTOR_SIZE < 3){
+					Q0(i,i) = PROCESS_LINEAR_NOISE_COVARIANCE;
+				}else{
+					Q0(i,i) = PROCESS_ANGULAR_NOISE_COVARIANCE;
+				}
+			}
+
+			R.resize(dim, dim);
 			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
 		}
 
 		void insertState(Eigen::VectorXd state){
-
 			// Regarding the state vector
 			X.conservativeResize(X.rows() + POSE_VECTOR_SIZE);
 			X.tail(state.size()) = state;
 
 			// Regarding the Covariance matrix
-			P.conservativeResize(P.rows() + POSE_VECTOR_SIZE, P.cols() + POSE_VECTOR_SIZE);
-			P.bottomRightCorner(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
+			Eigen::MatrixXd auxMatrix(P.rows() + POSE_VECTOR_SIZE, P.rows() + POSE_VECTOR_SIZE);
+			auxMatrix.setZero();
+			auxMatrix.topLeftCorner(P.rows(), P.rows()) = P;
+			auxMatrix.bottomRightCorner(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
+			P = auxMatrix;
+
+			ROS_INFO("P-OLD:");
+			for(int i = 0;i < P.cols();i++){
+				for(int j = 0;j < P.rows();j++){
+					ROS_INFO_STREAM(P(i,j));
+				}
+			}
 
 			// Regarding the observation matrix
 			A = Eigen::MatrixXd::Identity(A.rows() + POSE_VECTOR_SIZE, A.cols() + POSE_VECTOR_SIZE);
@@ -75,11 +95,35 @@ class filter{
 			H = Eigen::MatrixXd::Identity(H.rows() + POSE_VECTOR_SIZE, H.cols() + POSE_VECTOR_SIZE);
 
 			// Regarding the process noise covariance matrix
-			Q.conservativeResize(Q.rows() + POSE_VECTOR_SIZE, Q.cols() + POSE_VECTOR_SIZE);
-			Q.bottomRightCorner(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) = Q0;
+			Q.resize(Q.rows() + POSE_VECTOR_SIZE, Q.cols() + POSE_VECTOR_SIZE);
+			Q.setZero();
+
+			for(int i = 0; i < Q.rows(); i++){
+				if(i % POSE_VECTOR_SIZE < 3){
+					Q(i,i) = PROCESS_LINEAR_NOISE_COVARIANCE;
+				}else{
+					Q(i,i) = PROCESS_ANGULAR_NOISE_COVARIANCE;
+				}
+			}
 
 			// Regarding the measurement noise covariance matrix
 			R = Eigen::MatrixXd::Identity(R.rows() + POSE_VECTOR_SIZE, R.cols() + POSE_VECTOR_SIZE);
+
+			if(X.rows() == POSE_VECTOR_SIZE){
+				X.setZero();
+				P.setIdentity();
+				Q = Q0;
+			}
+
+			ROS_INFO("Q:");
+			for (int i = 0; i < Q.rows(); ++i) {
+				std::string row_str = "[ ";
+				for (int j = 0; j < Q.cols(); ++j) {
+					row_str += std::to_string(Q(i, j)) + " ";
+				}
+				row_str += "]";
+				ROS_INFO_STREAM(row_str);
+			}
 		}
 
 		void reset(){
@@ -93,8 +137,22 @@ class filter{
 			// Predicst state vector
 			X = A * X;
 
+			for(int i=0;i < X.size();i++){
+				ROS_INFO("old x%d = %f",i, X[i]);
+			}
+
 			// Predicts Covariance error matrix
 			P = A * P * A.transpose() + Q;
+
+			ROS_INFO("P-new:");
+			for (int i = 0; i < P.rows(); ++i) {
+				std::string row_str = "[ ";
+				for (int j = 0; j < P.cols(); ++j) {
+					row_str += std::to_string(P(i, j)) + " ";
+				}
+				row_str += "]";
+				ROS_INFO_STREAM(row_str);
+			}
 		}
 
 		void correct(Eigen::VectorXd Y){
@@ -109,6 +167,24 @@ class filter{
 
 			// Updates estimated state matrix with Kalman gain and estimated output error
 			X = X + K * I_pred;
+
+			ROS_INFO("K:");
+			for (int i = 0; i < K.rows(); ++i) {
+				std::string row_str = "[ ";
+				for (int j = 0; j < K.cols(); ++j) {
+					row_str += std::to_string(K(i, j)) + " ";
+				}
+				row_str += "]";
+				ROS_INFO_STREAM(row_str);
+			}
+
+			for(int i=0;i < I_pred.size();i++){
+				ROS_INFO("i_pred[%d] = %f",i, I_pred[i]);
+			}
+
+			for(int i=0;i < X.size();i++){
+				ROS_INFO("new x%d = %f",i, X[i]);
+			}
 
 			// Updating covariance error matrix with Kalman gaind and old covariance error matrix
 			P = (Eigen::MatrixXd::Identity(X.rows(), X.rows()) - K * H) * P;
