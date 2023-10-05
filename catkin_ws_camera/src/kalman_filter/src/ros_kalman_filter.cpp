@@ -184,7 +184,7 @@ class ros_filter{
             for (const auto& marker : cam_markers[camera_id]) {
                 aruco_msgs::Marker filtered_marker;
                 filtered_marker.id = marker.arucoId;
-                //filtered_marker.header = msg->header; // Use the same header as the input marker data
+                filtered_marker.header = msg->header; // Use the same header as the input marker data
 
                 // Extract the filtered data corresponding to this marker
                 if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= filtered_states.size()) {

@@ -34,12 +34,6 @@ void VisualizationHandler::clear_markers(){
 void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
     for(int i = 0; i < msg.markers.size(); i++){
         VisualizationMarker marker_candidate = VisualizationMarker(msg.markers.at(i));
-        // Fix Aruco pose results to RVIZ
-        auto new_pose = marker_candidate.get_tf();
-        tf::Quaternion rot = tf::Quaternion(0, 0, 1, 0); // Rotate z axis in 180 degrees
-        tf::Transform rot_tf = tf::Transform(rot); 
-        new_pose = rot_tf * new_pose;
-        marker_candidate.set_pose(new_pose); 
         int marker_index = find_marker(marker_candidate);
         if(marker_index != -1){ //Marker found: Update marker
             sys_markers.at(marker_index).set_marker(marker_candidate);
@@ -96,7 +90,7 @@ void VisualizationHandler::publish_markers(){
 std::vector<std::string> get_camera_topics(){ 
     ros::master::V_TopicInfo master_topics;
     ros::master::getTopics(master_topics);
-    std::string marker_topic_name("/aruco_marker_publisher/markers");
+    std::string marker_topic_name("/filtered_markers");
     std::vector<std::string>topics;
 
     for (ros::master::V_TopicInfo::iterator it = master_topics.begin() ; it != master_topics.end(); it++) {
