@@ -113,8 +113,9 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES marker_viz
-#  CATKIN_DEPENDS aruco_ros roscpp visualization_msgs
+  CATKIN_DEPENDS aruco_ros roscpp
 #  DEPENDS system_lib
+  DEPENDS Eigen3
 )
 
 ###########
@@ -125,7 +126,8 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS},
+  ${Eigen3_LIBRARIES}
 )
 
 ## Declare a C++ library
@@ -142,10 +144,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
-# add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
-# add_library(camera src/camera.cpp)
-# add_library(marker_viz src/marker_viz.cpp)
-# add_library(visualization_marker src/visualization_marker.cpp)
+add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,8 +160,8 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-# 
-
+target_link_libraries(ros_kalman_filter
+                      ${catkin_LIBRARIES})
 
 #############
 ## Install ##
