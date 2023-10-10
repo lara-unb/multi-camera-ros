@@ -206,9 +206,13 @@ class ros_filter{
             tf::Transform transform;
             tf::Quaternion quaternion, rotation;
 
-            transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
+            // M_PI rotating 540 degrees in the z axis (to countermeasure a possible problem on the input orientation)
+            #define AXIS_ROTATION -M_PI
+            #define AXIS_ROTATION_QUATERION -M_PI / 2
+
+            transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z).rotate(tf::Vector3(0, 0, 1), AXIS_ROTATION));
             tf::quaternionMsgToTF(pose.orientation, quaternion);
-            rotation.setRPY(0, 0, M_PI); // M_PI rotating 180 degrees in the z axis (to countermeasure an aruco marker pose problem)
+            rotation.setRPY(0, 0, 0);
             quaternion = quaternion * rotation;
             transform.setRotation(quaternion);
 
