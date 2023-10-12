@@ -204,17 +204,22 @@ class ros_filter{
         // Receives a msg with a pose, process it and convert it to eigen::vector
         Eigen::VectorXd msgToVector(geometry_msgs::Pose pose){
             tf::Transform transform;
-            tf::Quaternion quaternion, rotation;
+            tf::Quaternion adjust_rotation, msg_rotation;
+            tf::Vector3 msg_orientation;
 
-            // M_PI rotating 540 degrees in the z axis (to countermeasure a possible problem on the input orientation)
-            #define AXIS_ROTATION -M_PI
-            #define AXIS_ROTATION_QUATERION -M_PI / 2
+            msg_orientation = tf::Vector3(pose.position.x,
+                                          pose.position.y,
+                                          pose.position.z);
 
-            transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z).rotate(tf::Vector3(0, 0, 1), AXIS_ROTATION));
-            tf::quaternionMsgToTF(pose.orientation, quaternion);
-            rotation.setRPY(0, 0, 0);
-            quaternion = quaternion * rotation;
-            transform.setRotation(quaternion);
+            msg_rotation = tf::Quaternion(pose.orientation.x,
+                                          pose.orientation.y,
+                                          pose.orientation.z,
+                                          pose.orientation.w);
+            
+            transform = tf::Transform(msg_rotation, msg_orientation);
+            adjust_rotation = tf::Quaternion(0, 0, 1, 0);
+            auto adjust_rotation_tf =  tf::Transform(adjust_rotation);
+            transform = adjust_rotation_tf * transform;
 
             Eigen::VectorXd poseVector(7); // storing the poses in a vector with the format [xt,yt,zt,xr,yr,zr,wr]
 
