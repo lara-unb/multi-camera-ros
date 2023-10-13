@@ -204,19 +204,19 @@ class ros_filter{
         // Receives a msg with a pose, process it and convert it to eigen::vector
         Eigen::VectorXd msgToVector(geometry_msgs::Pose pose){
             tf::Transform transform;
-            tf::Quaternion adjust_rotation, msg_rotation;
-            tf::Vector3 msg_orientation;
+            tf::Quaternion adjust_rotation, msg_orientation;
+            tf::Vector3 msg_pose;
 
-            msg_orientation = tf::Vector3(pose.position.x,
-                                          pose.position.y,
-                                          pose.position.z);
+            msg_pose = tf::Vector3(pose.position.x,
+                                   pose.position.y,
+                                   pose.position.z);
 
-            msg_rotation = tf::Quaternion(pose.orientation.x,
+            msg_orientation = tf::Quaternion(pose.orientation.x,
                                           pose.orientation.y,
                                           pose.orientation.z,
                                           pose.orientation.w);
-            
-            transform = tf::Transform(msg_rotation, msg_orientation);
+
+            transform = tf::Transform(msg_orientation, msg_pose);
             adjust_rotation = tf::Quaternion(0, 0, 1, 0);
             auto adjust_rotation_tf =  tf::Transform(adjust_rotation);
             transform = adjust_rotation_tf * transform;
@@ -232,7 +232,7 @@ class ros_filter{
                             transform.getRotation().w();
             return poseVector;
         }
-        
+
         // Callback to handle marker data from cameras
         void cameraCallback(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id) {
 
