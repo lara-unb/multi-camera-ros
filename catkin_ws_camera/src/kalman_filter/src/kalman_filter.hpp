@@ -44,6 +44,12 @@ class filter{
 		Eigen::VectorXd I_cor;	// Corrected measurement innovation/residual
 		Eigen::VectorXd I_pred; // Predicterd measurement innovation/residual
 
+		// Function prototypes for non-linear models and their Jacobians
+		Eigen::VectorXd stateTransition(Eigen::VectorXd& state);
+		Eigen::MatrixXd stateTransitionJacobian(Eigen::VectorXd& state);
+		Eigen::VectorXd measurementModel(Eigen::VectorXd& state);
+		Eigen::MatrixXd measurementJacobian(Eigen::VectorXd& state);
+
 		void set_dimensions(int dim){
 			X.resize(dim);
 			X0.resize(dim);
@@ -69,16 +75,22 @@ class filter{
 			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
 		}
 
+		void resetWorld(int worldAddr){
+			P.block(worldAddr, worldAddr, POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
+			X.segment(worldAddr, POSE_VECTOR_SIZE).setZero();
+		}
+
 		void insertState(Eigen::VectorXd state){
 			// Regarding the state vector
-			X.conservativeResize(X.rows() + POSE_VECTOR_SIZE);
+			int size_difference = state.size() - X.size(); // Number of new elements to be added = new poses * POSE_VECTOR_SIZE
+			X.conservativeResize(X.rows() + size_difference);
 			X.tail(state.size()) = state;
 
 			// Regarding the Covariance matrix
-			Eigen::MatrixXd auxMatrix(P.rows() + POSE_VECTOR_SIZE, P.rows() + POSE_VECTOR_SIZE);
+			Eigen::MatrixXd auxMatrix(P.rows() + size_difference, P.rows() + size_difference);
 			auxMatrix.setZero();
 			auxMatrix.topLeftCorner(P.rows(), P.rows()) = P;
-			auxMatrix.bottomRightCorner(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
+			auxMatrix.bottomRightCorner(size_difference, size_difference) = Eigen::MatrixXd::Identity(size_difference, size_difference) * HIGH_COVARIANCE_PRESET;
 			P = auxMatrix;
 
 			ROS_INFO("P-OLD:");
@@ -89,13 +101,13 @@ class filter{
 			}
 
 			// Regarding the observation matrix
-			A = Eigen::MatrixXd::Identity(A.rows() + POSE_VECTOR_SIZE, A.cols() + POSE_VECTOR_SIZE);
+			A = Eigen::MatrixXd::Identity(A.rows() + size_difference, A.cols() + size_difference);
 
 			// Regarding the observation matrix
-			H = Eigen::MatrixXd::Identity(H.rows() + POSE_VECTOR_SIZE, H.cols() + POSE_VECTOR_SIZE);
+			H = Eigen::MatrixXd::Identity(H.rows() + size_difference, H.cols() + size_difference);
 
 			// Regarding the process noise covariance matrix
-			Q.resize(Q.rows() + POSE_VECTOR_SIZE, Q.cols() + POSE_VECTOR_SIZE);
+			Q.resize(Q.rows() + size_difference, Q.cols() + size_difference);
 			Q.setZero();
 
 			for(int i = 0; i < Q.rows(); i++){
@@ -107,7 +119,7 @@ class filter{
 			}
 
 			// Regarding the measurement noise covariance matrix
-			R = Eigen::MatrixXd::Identity(R.rows() + POSE_VECTOR_SIZE, R.cols() + POSE_VECTOR_SIZE);
+			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference);
 
 			if(X.rows() == POSE_VECTOR_SIZE){
 				X.setZero();

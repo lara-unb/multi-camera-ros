@@ -1,5 +1,6 @@
 // Example in your ROS node
 #include <ros/ros.h>
+#include <map>
 #include <ros/package.h>
 #include <aruco_msgs/MarkerArray.h>
 #include <geometry_msgs/PoseWithCovariance.h>
@@ -16,6 +17,13 @@ typedef struct trackedMarker {
     Eigen::MatrixXd covariance;
 }trackedMarker;
 
+// Structure to save a camera's pose
+typedef struct cameraBasis {
+    int stateVectorAddr;
+    Eigen::VectorXd pose;
+    Eigen::MatrixXd covariance;
+}cameraBasis;
+
 class ros_filter{
 
     // The Kalman filter itself
@@ -29,15 +37,21 @@ class ros_filter{
     // Map of publishers for filtered marker data, one for each camera
     std::map<int, ros::Publisher> filtered_marker_publishers;
 
+    // Map of publishers for camera data
+    std::map<int, ros::Publisher> camera_publishers;
+
     // List of camera topics
     std::vector<std::string> topics;
 
     // Subscribers for each camera topic
     std::map<int, ros::Subscriber> camera_subs;
 
+    // Map of cameras tracked by te system and their info
+    std::map<int, cameraBasis> camera_poses;
+
     // number of poses that are tracked in the system (there may be multiple version of the same aruco tag for different cameras)
     // used for new indexes in state vector calculation without the need to iterate over cam_markers for all cameras 
-    int tracked_poses = 0;
+    int tracked_poses = 0; // the same as stateVector size (from the filter)
 
     public:
         ros_filter(){
@@ -47,7 +61,7 @@ class ros_filter{
         }
 
         // Find all aruco marker publisher topics for each camera
-        void getCameraTopics(){ 
+        void getCameraTopics(){
             ros::master::V_TopicInfo master_topics;
             ros::master::getTopics(master_topics);
             std::string marker_topic_name("/aruco_marker_publisher/markers");
@@ -66,125 +80,45 @@ class ros_filter{
             for (const std::string& camera_topic : topics) {
                 int camera_id = extractCameraID(camera_topic);
 
+                insertCameraBasis(camera_id);
+
                 camera_subs[camera_id] = nh.subscribe<aruco_msgs::MarkerArray>(
                     camera_topic, 10, boost::bind(&ros_filter::cameraCallback, this, _1, camera_id));
 
-                // Create publishers for filtered marker data, one for each camera
-
+                // Create publishers for filtered marker data, one for each camera; and for the camera poses
                 if (camera_id != -1) {
-                    std::string filtered_marker_topic = "/cam_" + std::to_string(camera_id) + "/filtered_markers";
-                    createPublisherFiltered( filtered_marker_topic, camera_id, nh);
+                    std::string topic_name = "/cam_" + std::to_string(camera_id);
+                    createPublisherCameras(topic_name + "/filtered_cam_pose", camera_id, nh);
+                    createPublisherFiltered(topic_name + "/filtered_markers", camera_id, nh);
                 }
             }
         }
 
     private:
-        // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
-        void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id){
-            int markerTagId = marker.id;
-            geometry_msgs::Pose pose = marker.pose.pose;
-
-            Eigen::VectorXd poseVector = msgToVector(pose);
-
-            // Verifying if this marker is already tracked by this camera, if not, insert in the system
-            auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
-                                    [markerTagId](const trackedMarker& tracked_marker){
-                                        return tracked_marker.arucoId == markerTagId;
-                                    });
-
-            if(it != cam_markers[camera_id].end()){
-                // The marker is already tracked
-                trackedMarker& auxMarker = cam_markers[camera_id][std::distance(cam_markers[camera_id].begin(), it)];
-                auxMarker.pose = poseVector;
-                //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
-
-            }else{
-                // The marker is new
-                trackedMarker auxMarker;
-                auxMarker.arucoId = markerTagId;
-                auxMarker.stateVectorAddr = tracked_poses * POSE_VECTOR_SIZE;
-                auxMarker.pose = poseVector;
-                auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
-
-                cam_markers[camera_id].push_back(auxMarker);
-                tracked_poses++;
-            }
-        }
-
-        void insertPosesOnStateVector(Eigen::VectorXd& newState){
-            for(const auto& pair : cam_markers){
-                for(const auto& marker : pair.second){
-                    ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
-                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = marker.pose;
+        void insertCameraBasis(int camera_id){
+            // Verifying if this camera is already tracked. If not, insert in the system
+            if(!camera_poses.contains(camera_id)){
+                cameraBasis aux;
+                aux.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
+                aux.pose = Eigen::VectorXd::Zero(POSE_VECTOR_SIZE);
+                aux.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
+                if(camera_id != 1){
+                    aux.covariance *= HIGH_COVARIANCE_PRESET;
                 }
+                camera_poses[camera_id] = aux;
             }
         }
 
-        void publishData(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id){
-            // Retrieve the filtered data from the Kalman filter (kf)
-            Eigen::VectorXd filtered_states = kf.getState();
-            Eigen::MatrixXd covariance_matrix = kf.getCovariance();
-
-            aruco_msgs::MarkerArray filtered_markers_msg;
-            filtered_markers_msg.markers.reserve(cam_markers[camera_id].size());
-
-            for (const auto& marker : cam_markers[camera_id]) {
-                aruco_msgs::Marker filtered_marker;
-                filtered_marker.id = marker.arucoId;
-                filtered_marker.header = msg->header; // Use the same header as the input marker data
-
-                // Extract the filtered data corresponding to this marker
-                if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= filtered_states.size()) {
-                    Eigen::VectorXd marker_pose = filtered_states.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE);
-
-                    // Create a geometry_msgs::Pose message from the filtered pose data
-                    geometry_msgs::Pose filtered_pose;
-                    filtered_pose.position.x = marker_pose(0);
-                    filtered_pose.position.y = marker_pose(1);
-                    filtered_pose.position.z = marker_pose(2);
-                    filtered_pose.orientation.x = marker_pose(3);
-                    filtered_pose.orientation.y = marker_pose(4);
-                    filtered_pose.orientation.z = marker_pose(5);
-                    filtered_pose.orientation.w = marker_pose(6);
-
-                    filtered_marker.pose.pose = filtered_pose;
-
-                    // Populate the filtered_marker.pose.covariance with the covariance matrix
-                    filtered_marker.pose.covariance.fill(0.0); // Initialize to zero
-
-                    #if DEBUG == true
-                    ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());
-                    ROS_INFO("filtered_marker.pose.covariance_size: %ld", filtered_marker.pose.covariance.size());
-                    #endif
-
-                    // Extract the corresponding covariance matrix for this marker
-                    // adding the '-1' part is important because the covariance matrix is 7x7 and the last row and cols relate to the
-                    // imaginary 'w' rotation which is not really meaningful, and the output is a 6x6 matrix by the format 
-                    // specified in geometry_msgs
-
-                    if (marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows()  &&
-                        marker.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols() ) {
-                        for (int i = 0; i < POSE_VECTOR_SIZE -1; ++i) {
-                            for (int j = 0; j < POSE_VECTOR_SIZE -1; ++j) {
-                                filtered_marker.pose.covariance[i * (POSE_VECTOR_SIZE -1) + j] =
-                                    covariance_matrix(marker.stateVectorAddr + i, marker.stateVectorAddr + j);
-                            }
-                        }
-                    }
-                    filtered_markers_msg.markers.push_back(filtered_marker);
-                }
-            }
-
-            // Publish the filtered marker data
-            if (filtered_marker_publishers.find(camera_id) != filtered_marker_publishers.end()) {
-                filtered_marker_publishers[camera_id].publish(filtered_markers_msg);
-            }
-        }
-
-        // Create the publishers and store the references in a map
+        // Create the filtered markers publishers and store the references in a map
         void createPublisherFiltered(std::string filtered_marker_topic, int camera_id, ros::NodeHandle nh){
             filtered_marker_publishers[camera_id] = nh.advertise<aruco_msgs::MarkerArray>(
-                filtered_marker_topic, 10);
+                filtered_marker_topic, 5);
+        }
+
+        // Create the camera publishers and store the references in a map
+        void createPublisherCameras(std::string camera_topic, int camera_id, ros::NodeHandle nh){
+            camera_publishers[camera_id] = nh.advertise<geometry_msgs::PoseWithCovariance>(
+                camera_topic, 5);
         }
 
         // Extract the camera ID from the topic name (assuming "cam_x" format)
@@ -233,6 +167,169 @@ class ros_filter{
             return poseVector;
         }
 
+        // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
+        void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id){
+            int markerTagId = marker.id;
+            geometry_msgs::Pose pose = marker.pose.pose;
+
+            Eigen::VectorXd poseVector = msgToVector(pose);
+
+            // Verifying if this marker is already tracked by this camera, if not, insert in the system
+            auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
+                                    [markerTagId](const trackedMarker& tracked_marker){
+                                        return tracked_marker.arucoId == markerTagId;
+                                    });
+
+            if(it != cam_markers[camera_id].end()){
+                // The marker is already tracked
+                trackedMarker& auxMarker = cam_markers[camera_id][std::distance(cam_markers[camera_id].begin(), it)];
+                auxMarker.pose = poseVector;
+                //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
+
+            }else{
+                // The marker is new
+                trackedMarker auxMarker;
+                auxMarker.arucoId = markerTagId;
+                auxMarker.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
+                auxMarker.pose = poseVector;
+                auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
+
+                cam_markers[camera_id].push_back(auxMarker);
+            }
+        }
+
+        void insertPosesOnStateVector(Eigen::VectorXd& newState){
+            for(const auto& pair : cam_markers){
+                ROS_INFO("stateVectorAddr: %d", camera_poses[pair.first].stateVectorAddr);
+                newState.segment(camera_poses[pair.first].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[pair.first].pose;
+                for(const auto& marker : pair.second){
+                    ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
+                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = marker.pose;
+                }
+            }
+        }
+
+        // Extracting a marker data from the state vector. Overload dedicated to markers
+        aruco_msgs::Marker extractDataFromState(trackedMarker data, Eigen::VectorXd filtered_states, Eigen::MatrixXd covariance_matrix){
+            aruco_msgs::Marker filtered_data;
+            filtered_data.id = data.arucoId;
+
+            // Extract the filtered data corresponding to this marker
+            if (data.stateVectorAddr + POSE_VECTOR_SIZE <= filtered_states.size()) {
+                Eigen::VectorXd data_pose = filtered_states.segment(data.stateVectorAddr, POSE_VECTOR_SIZE);
+
+                // Create a geometry_msgs::Pose message from the filtered pose data
+                geometry_msgs::Pose filtered_pose;
+                filtered_pose.position.x = data_pose(0);
+                filtered_pose.position.y = data_pose(1);
+                filtered_pose.position.z = data_pose(2);
+                filtered_pose.orientation.x = data_pose(3);
+                filtered_pose.orientation.y = data_pose(4);
+                filtered_pose.orientation.z = data_pose(5);
+                filtered_pose.orientation.w = data_pose(6);
+
+                filtered_data.pose.pose = filtered_pose;
+
+                // Populate the filtered_data.pose.covariance with the covariance matrix
+                filtered_data.pose.covariance.fill(0.0); // Initialize to zero
+
+                #if DEBUG == true
+                ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());
+                ROS_INFO("filtered_data.pose.covariance_size: %ld", filtered_data.pose.covariance.size());
+                #endif
+
+                // Extract the corresponding covariance matrix for this marker
+                // adding the '-1' part is important because the covariance matrix is 7x7 and the last row and cols relate to the
+                // imaginary 'w' rotation which is not really meaningful, and the output is a 6x6 matrix by the format 
+                // specified in geometry_msgs
+
+                if (data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows()  &&
+                    data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols() ) {
+                    for (int i = 0; i < POSE_VECTOR_SIZE -1; ++i) {
+                        for (int j = 0; j < POSE_VECTOR_SIZE -1; ++j) {
+                            filtered_data.pose.covariance[i * (POSE_VECTOR_SIZE -1) + j] =
+                                covariance_matrix(data.stateVectorAddr + i, data.stateVectorAddr + j);
+                        }
+                    }
+                }
+            }
+            return filtered_data;
+        }
+
+        // Extracting a camera data from the state vector. Overload dedicated to cameras
+        geometry_msgs::PoseWithCovariance extractDataFromState(cameraBasis data, Eigen::VectorXd filtered_states, Eigen::MatrixXd covariance_matrix){
+            geometry_msgs::PoseWithCovariance filtered_data;
+
+            // Extract the filtered data corresponding to this marker
+            if (data.stateVectorAddr + POSE_VECTOR_SIZE <= filtered_states.size()) {
+                Eigen::VectorXd data_pose = filtered_states.segment(data.stateVectorAddr, POSE_VECTOR_SIZE);
+
+                // Create a geometry_msgs::Pose message from the filtered pose data
+                geometry_msgs::Pose filtered_pose;
+                filtered_pose.position.x = data_pose(0);
+                filtered_pose.position.y = data_pose(1);
+                filtered_pose.position.z = data_pose(2);
+                filtered_pose.orientation.x = data_pose(3);
+                filtered_pose.orientation.y = data_pose(4);
+                filtered_pose.orientation.z = data_pose(5);
+                filtered_pose.orientation.w = data_pose(6);
+
+                filtered_data.pose = filtered_pose;
+
+                // Populate the filtered_data.covariance with the covariance matrix
+                filtered_data.covariance.fill(0.0); // Initialize to zero
+
+                #if DEBUG == true
+                ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());
+                ROS_INFO("filtered_data.pose.covariance_size: %ld", filtered_data.covariance.size());
+                #endif
+
+                // Extract the corresponding covariance matrix for this marker
+                // adding the '-1' part is important because the covariance matrix is 7x7 and the last row and cols relate to the
+                // imaginary 'w' rotation which is not really meaningful, and the output is a 6x6 matrix by the format 
+                // specified in geometry_msgs
+
+                if (data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows()  &&
+                    data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols() ) {
+                    for (int i = 0; i < POSE_VECTOR_SIZE -1; ++i) {
+                        for (int j = 0; j < POSE_VECTOR_SIZE -1; ++j) {
+                            filtered_data.covariance[i * (POSE_VECTOR_SIZE -1) + j] =
+                                covariance_matrix(data.stateVectorAddr + i, data.stateVectorAddr + j);
+                        }
+                    }
+                }
+            }
+            return filtered_data;
+        }
+
+        void publishData(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id){
+            // Retrieve the filtered data from the Kalman filter (kf)
+            Eigen::VectorXd filtered_states = kf.getState();
+            Eigen::MatrixXd covariance_matrix = kf.getCovariance();
+
+            geometry_msgs::PoseWithCovariance camera_msg;
+            camera_msg = extractDataFromState(camera_poses[camera_id], filtered_states, covariance_matrix);
+
+            aruco_msgs::MarkerArray filtered_markers_msg;
+            filtered_markers_msg.markers.reserve(cam_markers[camera_id].size());
+
+            for (const auto& marker : cam_markers[camera_id]) {
+                aruco_msgs::Marker markerAux = extractDataFromState(marker, filtered_states, covariance_matrix);
+                markerAux.header = msg->header; // Use the same header as the input marker data
+                filtered_markers_msg.markers.push_back(markerAux);
+            }
+
+            // Publish the filtered marker data
+            if (filtered_marker_publishers.find(camera_id) != filtered_marker_publishers.end()){
+                filtered_marker_publishers[camera_id].publish(filtered_markers_msg);
+            }
+
+            // Publish the filtered camera data
+            if (camera_publishers.find(camera_id) != camera_publishers.end()){
+                camera_publishers[camera_id].publish(camera_msg);
+            }
+        }
+
         // Callback to handle marker data from cameras
         void cameraCallback(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id) {
 
@@ -244,11 +341,18 @@ class ros_filter{
             // Adapt the filter for the new data/change of state vector size
             Eigen::VectorXd oldState = kf.getState();
 
+            ROS_INFO_STREAM(tracked_poses);
+            ROS_INFO_STREAM(oldState);
+
             // Verifying if there is a need to extend the state vector (new states)
             if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE){
+                int size_difference = (tracked_poses * POSE_VECTOR_SIZE) - oldState.size();
                 oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
-                oldState.tail(POSE_VECTOR_SIZE).setZero();
+                oldState.tail(size_difference).setZero();
                 kf.insertState(oldState);
+                // Dont think this is necessary but just in case, considering its being tested
+                // Makes so that the pose it's covariance related to the world (initial camera) is 0.
+                // kf.resetWorld(camera_poses[1].stateVectorAddr);
             }
 
             Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
