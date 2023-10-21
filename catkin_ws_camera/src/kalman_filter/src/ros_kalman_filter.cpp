@@ -53,6 +53,8 @@ class ros_filter{
     // used for new indexes in state vector calculation without the need to iterate over cam_markers for all cameras 
     int tracked_poses = 0; // the same as stateVector size (from the filter)
 
+    std::vector<std::shared_ptr<aruco_msgs::MarkerArray>> last_msgs; // Saves the last observation published by aruco ros node of each camera
+
     public:
         ros_filter(){
             // Prepare the filter by defining the initial dimension
@@ -74,6 +76,12 @@ class ros_filter{
                     }  
                 }
             }
+
+            for (int i = 0; i < topics.size(); i++)
+            {   
+                last_msgs.push_back(std::make_shared<aruco_msgs::MarkerArray>());
+            }
+            
         }
 
         void subscribeTopics(){
@@ -92,6 +100,10 @@ class ros_filter{
                     createPublisherFiltered(topic_name + "/filtered_markers", camera_id, nh);
                 }
             }
+        }
+
+        ros::Timer createTimer(ros::Duration period){
+            return nh.createTimer(period, &ros_filter::timerCallback, this);
         }
 
     private:
@@ -302,7 +314,7 @@ class ros_filter{
             return filtered_data;
         }
 
-        void publishData(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id){
+        void publishData(const std::shared_ptr<aruco_msgs::MarkerArray>& msg, const int& camera_id){
             // Retrieve the filtered data from the Kalman filter (kf)
             Eigen::VectorXd filtered_states = kf.getState();
             Eigen::MatrixXd covariance_matrix = kf.getCovariance();
@@ -332,43 +344,57 @@ class ros_filter{
 
         // Callback to handle marker data from cameras
         void cameraCallback(const aruco_msgs::MarkerArray::ConstPtr& msg, const int& camera_id) {
-
-            // Insert the markers detected in the system
-            for (const auto& marker : msg->markers){
-                insertUpdateMarker(marker, camera_id);
-            }
-
-            // Adapt the filter for the new data/change of state vector size
-            Eigen::VectorXd oldState = kf.getState();
-
-            ROS_INFO_STREAM(tracked_poses);
-            ROS_INFO_STREAM(oldState);
-
-            // Verifying if there is a need to extend the state vector (new states)
-            if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE){
-                int size_difference = (tracked_poses * POSE_VECTOR_SIZE) - oldState.size();
-                oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
-                oldState.tail(size_difference).setZero();
-                kf.insertState(oldState);
-                // Dont think this is necessary but just in case, considering its being tested
-                // Makes so that the pose it's covariance related to the world (initial camera) is 0.
-                // kf.resetWorld(camera_poses[1].stateVectorAddr);
-            }
-
-            Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
-            insertPosesOnStateVector(newState);
-
-            #if DEBUG == true
-                ROS_INFO("cam_marker size: %lu", cam_markers[camera_id].size());
-            #endif
-
-            // Filter the data
-            kf.predict();
-            kf.correct(newState);
-
-            // Construct the to-be-published data structure and publish them
-            publishData(msg, camera_id);
+            int index  = camera_id - 1;
+            auto p  = last_msgs.at(index);
+            *p = *msg;
         }
+        
+        void timerCallback(const ros::TimerEvent& event) {
+            for (int i = 0; i < last_msgs.size(); i++)
+            {
+                if(last_msgs.at(i) != nullptr){
+                    auto& msg = last_msgs.at(i);
+                    int camera_id = i + 1;
+
+                    // Insert the markers detected in the system
+                    for (const auto& marker : msg->markers){
+                        insertUpdateMarker(marker, camera_id);
+                    }
+
+                    // Adapt the filter for the new data/change of state vector size
+                    Eigen::VectorXd oldState = kf.getState();
+
+                    ROS_INFO_STREAM(tracked_poses);
+                    ROS_INFO_STREAM(oldState);
+
+                    // Verifying if there is a need to extend the state vector (new states)
+                    if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE){
+                        int size_difference = (tracked_poses * POSE_VECTOR_SIZE) - oldState.size();
+                        oldState.conservativeResize(tracked_poses * POSE_VECTOR_SIZE);
+                        oldState.tail(size_difference).setZero();
+                        kf.insertState(oldState);
+                        // Dont think this is necessary but just in case, considering its being tested
+                        // Makes so that the pose it's covariance related to the world (initial camera) is 0.
+                        // kf.resetWorld(camera_poses[1].stateVectorAddr);
+                    } 
+
+                    Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
+                    insertPosesOnStateVector(newState);
+
+                    #if DEBUG == true
+                        ROS_INFO("cam_marker size: %lu", cam_markers[camera_id].size());
+                    #endif
+
+                    // Filter the data
+                    kf.predict();
+                    kf.correct(newState);
+
+                    // Construct the to-be-published data structure and publish them
+                    publishData(msg, camera_id);
+                }
+            }   
+        }
+
 };
 
 int main(int argc, char** argv) {
@@ -379,6 +405,7 @@ int main(int argc, char** argv) {
     ROS_INFO_STREAM("Kalman filter on!");
     filter.getCameraTopics();
     filter.subscribeTopics();
+    ros::Timer timer = filter.createTimer(ros::Duration(0.005));
 
     ros::spin();
 
