@@ -144,7 +144,9 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
-add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
+add_library(filter_variables src/filter_variables.cpp)
+add_library(ros_filter src/ros_filter.cpp)
+add_executable(ros_kalman_filter src/ros_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,7 +163,9 @@ add_executable(ros_kalman_filter src/ros_kalman_filter.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(ros_kalman_filter
-                      ${catkin_LIBRARIES})
+                      ${catkin_LIBRARIES}
+                      ros_filter
+                      filter_variables)
 
 #############
 ## Install ##
