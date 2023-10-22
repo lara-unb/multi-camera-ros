@@ -1,5 +1,4 @@
 #include "ros_filter.h"
-
 #include <tf/transform_broadcaster.h>
 
 
@@ -47,7 +46,7 @@ void RosFilter::subscribeTopics() {
         }
     }
 }
-     
+
 ros::Timer RosFilter::createTimer(ros::Duration period) {
     return nh.createTimer(period, &RosFilter::timerCallback, this);
 }
@@ -55,11 +54,11 @@ ros::Timer RosFilter::createTimer(ros::Duration period) {
 void RosFilter::insertCameraBasis(int camera_id) {
     // Verifying if this camera is already tracked. If not, insert in the system
     if(!camera_poses.contains(camera_id)) {
-        cameraBasis aux;
-        aux.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
-        aux.pose = Eigen::VectorXd::Zero(POSE_VECTOR_SIZE);
-        aux.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
-        
+        cameraBasis aux((tracked_poses++) * POSE_VECTOR_SIZE,
+                         Eigen::VectorXd::Zero(POSE_VECTOR_SIZE),
+                         Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE),
+                         tf::Transform());
+       
         if(camera_id != 1) {
             aux.covariance *= HIGH_COVARIANCE_PRESET;
         }
@@ -103,7 +102,7 @@ Eigen::VectorXd RosFilter::msgToVector(geometry_msgs::Pose pose) {
                                     pose.orientation.w);
 
     transform = tf::Transform(msg_orientation, msg_pose);
-    adjust_rotation = tf::Quaternion(0, 0, 1, 0);
+    adjust_rotation = tf::Quaternion(0, 0, 1, 0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
     auto adjust_rotation_tf =  tf::Transform(adjust_rotation);
     transform = adjust_rotation_tf * transform;
 
@@ -119,21 +118,46 @@ Eigen::VectorXd RosFilter::msgToVector(geometry_msgs::Pose pose) {
     return poseVector;
 }
 
+tf::Transform RosFilter::tfToWorldBasis(int this_camera_id){
+    tf::Transform tf_final;
+
+    for(const auto& [id, camera] : camera_poses){
+        
+    }
+
+    return tf_final;
+}
+
 void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
     int markerTagId = marker.id;
     geometry_msgs::Pose pose = marker.pose.pose;
 
     Eigen::VectorXd poseVector = msgToVector(pose);
 
-    // Verifying if this marker is already tracked by this camera, if not, insert in the system
-    auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
-                            [markerTagId](const trackedMarker& tracked_marker){
-                                return tracked_marker.arucoId == markerTagId;
-                            });
+    // Verifying if this marker is already tracked by any camera, if not, insert in the system
+    int marker_index;
+    int marker_found_camera_id;
 
-    if(it != cam_markers[camera_id].end()) {
+    for(const auto& [id, camera] : cam_markers){
+        auto it = std::find_if(cam_markers[id].begin(), cam_markers[id].end(),
+                        [markerTagId](const trackedMarker& tracked_marker){
+                            return tracked_marker.arucoId == markerTagId;
+                        });
+        if(it != cam_markers[id].end()) {
+            marker_index = std::distance(cam_markers[camera_id].begin(), it);
+            marker_found_camera_id = (id != camera_id) ? id : camera_id;
+            break;
+        }
+        
+    }
+
+    if(marker_found_camera_id == camera_id) {
         // The marker is already tracked
-        trackedMarker& auxMarker = cam_markers[camera_id][std::distance(cam_markers[camera_id].begin(), it)];
+        trackedMarker& auxMarker = cam_markers[camera_id][marker_found_index];
+
+        // put pose on world basis
+        // ...
+
         auxMarker.pose = poseVector;
         //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
 
@@ -142,6 +166,10 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
         trackedMarker auxMarker;
         auxMarker.arucoId = markerTagId;
         auxMarker.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
+
+        // put pose on world basis
+        // ...
+
         auxMarker.pose = poseVector;
         auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
 
@@ -309,9 +337,9 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
                 oldState.tail(size_difference).setZero();
                 kf.insertState(oldState);
                 // Dont think this is necessary but just in case, considering its being tested
-                // Makes so that the pose it's covariance related to the world (initial camera) is 0.
+                // Makes so that the pose's covariance related to the world (initial camera) is 0.
                 // kf.resetWorld(camera_poses[1].stateVectorAddr);
-            } 
+            }
 
             Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
             insertPosesOnStateVector(newState);

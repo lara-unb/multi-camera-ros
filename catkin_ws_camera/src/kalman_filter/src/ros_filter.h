@@ -8,7 +8,6 @@
 #include <aruco_msgs/MarkerArray.h>
 #include <geometry_msgs/PoseWithCovariance.h>
 
-
 #include "filter_variables.h"
 #include "kalman_filter.hpp"
 
@@ -26,16 +25,16 @@ class RosFilter {
         
         // Create Timer responsible for update the state of the system 
         ros::Timer createTimer(ros::Duration period);
-        
+
     private:
         // The Kalman filter itself
         filter kf;
-        
+
         // Node handle responsible for communication with ROS processes
         ros::NodeHandle nh;
 
         // Map of marker list on the system with cameras on the system
-        std::map<int, std::vector<trackedMarker>> cam_markers;
+         std::map<int, std::vector<trackedMarker>> cam_markers;
 
         // Map of publishers for filtered marker data, one for each camera
         std::map<int, ros::Publisher> filtered_marker_publishers;
@@ -49,7 +48,7 @@ class RosFilter {
         // Subscribers for each camera topic
         std::map<int, ros::Subscriber> camera_subs;
 
-        // Map of cameras tracked by te system and their info
+        // Map of cameras tracked by the system and their info
         std::map<int, cameraBasis> camera_poses;
 
         // number of poses that are tracked in the system (there may be multiple version of the same aruco tag for different cameras)
@@ -59,7 +58,6 @@ class RosFilter {
         // Saves the last observation published by aruco ros node of each camera
         std::vector<std::shared_ptr<aruco_msgs::MarkerArray>> last_msgs;
 
-        
         // Insert a camera on the system for fututre use on the filter
         void insertCameraBasis(int camera_id);
 
@@ -74,6 +72,9 @@ class RosFilter {
 
         // Receives a msg with a pose, process it and convert it to eigen::vector
         Eigen::VectorXd msgToVector(geometry_msgs::Pose pose);
+
+        // Finds the tf that transform the base of a camera to the closest it can to the origin/world (cam_1)
+        tf::Transform tfToWorldBasis(int this_camera_id);
 
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
         void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id);
