@@ -73,7 +73,9 @@ class RosFilter {
         // Receives a msg with a pose, process it and convert it to eigen::vector
         Eigen::VectorXd msgToVector(geometry_msgs::Pose pose);
 
-        // Finds the tf that transform the base of a camera to the closest it can to the origin/world (cam_1)
+        tf::Transform convertPoseToTf(Eigen::VectorXd pose);
+
+        // Finds the tf that transform the base of a camera to the closest it can to the origin/world (cam_1) (lesser number of cam_x)
         tf::Transform tfToWorldBasis(int this_camera_id);
 
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it

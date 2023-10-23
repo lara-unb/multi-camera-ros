@@ -21,8 +21,8 @@ class cameraBasis {
         Eigen::VectorXd pose;
         Eigen::MatrixXd covariance;
         tf::Transform tf_previous;  //relate to the pose of the previous camera. ex.: if it's cam3, it will give the tf to the cam2 pose.
-
+        int previous_id;
+        
         cameraBasis(int address, Eigen::VectorXd pose, Eigen::MatrixXd cv, tf::Transform tf);
-        void updateTfPrevious(cameraBasis previous);
-    
+        void updateTfPrevious(tf::Transform new_marker_tf, tf::Transform  marker_tf_from_previous, int new_previous_id);
 };
