@@ -1,6 +1,7 @@
 #include "ros_filter.h"
 #include <tf/transform_broadcaster.h>
-
+#include <vector>
+#include <algorithm>
 
 RosFilter::RosFilter() {
     // Prepare the filter by defining the initial dimension
@@ -87,7 +88,7 @@ int  RosFilter::extractCameraID(const std::string& camera_topic) {
     return -1;
 }
 
-Eigen::VectorXd RosFilter::msgToVector(geometry_msgs::Pose pose) {
+Eigen::VectorXd RosFilter::msgToPose(geometry_msgs::Pose pose) {
     tf::Transform transform;
     tf::Quaternion adjust_rotation, msg_orientation;
     tf::Vector3 msg_pose;
@@ -105,20 +106,10 @@ Eigen::VectorXd RosFilter::msgToVector(geometry_msgs::Pose pose) {
     adjust_rotation = tf::Quaternion(0, 0, 1, 0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
     auto adjust_rotation_tf =  tf::Transform(adjust_rotation);
     transform = adjust_rotation_tf * transform;
-
-    Eigen::VectorXd poseVector(7); // storing the poses in a vector with the format [xt,yt,zt,xr,yr,zr,wr]
-
-    poseVector << transform.getOrigin().x(),
-                    transform.getOrigin().y(),
-                    transform.getOrigin().z(),
-                    transform.getRotation().x(),
-                    transform.getRotation().y(),
-                    transform.getRotation().z(),
-                    transform.getRotation().w();
-    return poseVector;
+    return tfToPose(transform);
 }
 
-tf::Transform RosFilter::tfToWorldBasis(int this_camera_id){    
+tf::Transform RosFilter::tfToWorldFrame(int this_camera_id){    
     int current_id = this_camera_id;
     int previous_id = camera_poses[current_id].previous_id;
     tf::Transform tf_to_base = camera_poses[current_id].previous_tf;
@@ -135,10 +126,10 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
     int markerTagId = marker.id;
     geometry_msgs::Pose pose = marker.pose.pose;
 
-    Eigen::VectorXd poseVector = msgToVector(pose);
+    Eigen::VectorXd poseVector = msgToPose(pose);
 
     // Verifying if this marker is already tracked by any camera, if not, insert in the system
-    int marker_index;
+    int marker_index = -1;
     int marker_found_camera_id;
 
     for(const auto& [id, marker_list] : cam_markers){
@@ -153,10 +144,20 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
         }
         
     }
+    
+    if(marker_index == -1) {
+        // The marker is new 
+        trackedMarker auxMarker;
+        auxMarker.arucoId = markerTagId;
+        auxMarker.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
+        auxMarker.pose = poseVector;
+        auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
 
-    if(marker_found_camera_id == camera_id) {
+        cam_markers[camera_id].push_back(auxMarker);
+    }
+    else if(marker_found_camera_id == camera_id) {
         // The marker is already tracked by this camera
-        trackedMarker& auxMarker = cam_markers[camera_id][marker_found_index];
+        trackedMarker& auxMarker = cam_markers[camera_id][marker_index];
 
         auxMarker.pose = poseVector;
         //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
@@ -166,43 +167,66 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
         // Marker is being tracked by another camera 
 
         // Updates the tf_previous from the camera based on marker pose of the another camera with id lesser than this one (otherwise it would fall on the first if)
-        camera_poses[camera_id].updateTfPrevious(convertPoseToTf(poseVector), 
-                                                 convertPoseToTf(cam_markers[marker_found_camera_id][marker_index].pose),
+        camera_poses[camera_id].updateTfPrevious(poseToTf(poseVector), 
+                                                 poseToTf(cam_markers[marker_found_camera_id][marker_index].pose),
                                                  marker_found_camera_id);
         
-        // Checks if the marker already exists on the camera
+        // Checks if the marker already exists in the camera
         auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
                             [markerTagId](const trackedMarker& tracked_marker){
                                 return tracked_marker.arucoId == markerTagId;
                             });
 
         if(it != cam_markers[camera_id].end()) {
-            // The marker is already exists on the camera 
+            // The marker is already exists in the camera 
             trackedMarker& auxMarker = cam_markers[camera_id][std::distance(cam_markers[camera_id].begin(), it)];
             auxMarker.pose = poseVector;
             //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
 
         } else {
-            // The marker is new
-            trackedMarker auxMarker;
-            auxMarker.arucoId = markerTagId;
-            auxMarker.stateVectorAddr = (tracked_poses++) * POSE_VECTOR_SIZE;
+            // The marker doesn't exists in the camera
+            trackedMarker auxMarker = cam_markers[marker_found_camera_id][marker_index];
             auxMarker.pose = poseVector;
-            auxMarker.covariance = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE) * HIGH_COVARIANCE_PRESET;
-
             cam_markers[camera_id].push_back(auxMarker);
         }
     }
 }
 
-void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState) {
-    for(const auto& pair : cam_markers) {
-        ROS_INFO("stateVectorAddr: %d", camera_poses[pair.first].stateVectorAddr);
-        newState.segment(camera_poses[pair.first].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[pair.first].pose;
-        for(const auto& marker : pair.second) {
-            ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
-            newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = marker.pose;
-        }
+void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) {
+    std::vector<int> inserted_markers;
+    // Inserts camera and all it's markers observations into the state
+    ROS_INFO("stateVectorAddr: %d", camera_poses[cam_id].stateVectorAddr);
+    // Updates camera pose to the world frame
+    camera_poses[cam_id].pose = tfToPose(tfToWorldFrame(cam_id).inverse());
+    newState.segment(camera_poses[cam_id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[cam_id].pose;
+    
+    for(const auto& marker : cam_markers[cam_id]){
+        ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
+        // Updates marker pose to the world frame
+        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(tfToWorldFrame(cam_id) * 
+                                                                                     poseToTf(marker.pose));
+        inserted_markers.push_back(marker.arucoId);                                                                                
+    }
+    // Insert other cameras and their obsevations into the state
+    for(const auto& [id, marker_list] : cam_markers) {
+        if(id != cam_id)
+        {
+            ROS_INFO("stateVectorAddr: %d", camera_poses[id].stateVectorAddr);
+            // Updates camera pose to the world frame
+            camera_poses[id].pose = tfToPose(tfToWorldFrame(id).inverse());
+            newState.segment(camera_poses[id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[id].pose;
+            for(const auto& marker : marker_list) {
+                // Checks if the marker isn't already inserted by the current camera
+                if(std::find(inserted_markers.begin(),
+                             inserted_markers.end(), 
+                             marker.arucoId) == inserted_markers.end()) 
+                {
+                    ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
+                    // Updates marker pose to the world frame
+                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(tfToWorldFrame(id) * poseToTf(marker.pose));
+                }    
+            }
+        }   
     }
 }
 
@@ -360,7 +384,7 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
             }
             
             Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
-            insertPosesOnStateVector(newState);
+            insertPosesOnStateVector(newState, camera_id);
 
             #if DEBUG == true
                 ROS_INFO("cam_marker size: %lu", cam_markers[camera_id].size());
@@ -375,9 +399,32 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
         }
     }
     
-    tf::Transform RosFilter::convertPoseToTf(Eigen::VectorXd pose) {
-        tf::Vector3 tr(pose(0), pose(1), pose(2));
-        tf::Quaternion rot(pose(3), pose(4), pose(5), pose(6));
-        return tf::Transform(rot, tr);
-    }
 }
+
+tf::Transform RosFilter::poseToTf( Eigen::VectorXd pose) {
+    tf::Vector3 tr(pose(0), pose(1), pose(2));
+    tf::Quaternion rot(pose(3), pose(4), pose(5), pose(6));
+    return tf::Transform(rot, tr);
+}
+
+Eigen::VectorXd RosFilter::tfToPose(tf::Transform transform) {
+    
+    Eigen::VectorXd pose(7);  // storing the poses in a vector with the format [xt,yt,zt,xr,yr,zr,wr]
+
+    pose << transform.getOrigin().x(),
+                    transform.getOrigin().y(),
+                    transform.getOrigin().z(),
+                    transform.getRotation().x(),
+                    transform.getRotation().y(),
+                    transform.getRotation().z(),
+                    transform.getRotation().w();
+    
+    return pose;
+}
+
+Eigen::VectorXd RosFilter::convertPoseToWorldFrame(Eigen::VectorXd pose, int cam_id) { 
+    tf::Transform pose_tf =  poseToTf(pose);
+    tf::Transform tf_to_world_frame = tfToWorldFrame(cam_id);
+    pose_tf =  tf_to_world_frame * pose_tf;
+    return tfToPose(pose_tf);
+} 

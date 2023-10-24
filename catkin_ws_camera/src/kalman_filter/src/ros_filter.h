@@ -71,18 +71,25 @@ class RosFilter {
         int extractCameraID(const std::string& camera_topic);
 
         // Receives a msg with a pose, process it and convert it to eigen::vector
-        Eigen::VectorXd msgToVector(geometry_msgs::Pose pose);
-
-        tf::Transform convertPoseToTf(Eigen::VectorXd pose);
+        Eigen::VectorXd msgToPose(geometry_msgs::Pose pose);
+        
+       // Converts a given pose from Eigen::VectorXd  to tf::Transform
+        tf::Transform poseToTf(Eigen::VectorXd pose);
+        
+        // Converts a given pose from tf::Transform to Eigen::VectorXd
+        Eigen::VectorXd tfToPose(tf::Transform transform); 
 
         // Finds the tf that transform the base of a camera to the closest it can to the origin/world (cam_1) (lesser number of cam_x)
-        tf::Transform tfToWorldBasis(int this_camera_id);
+        tf::Transform tfToWorldFrame(int this_camera_id);
+        
+        // Applies the transformation from  tfToWorldFrame in the pose
+        Eigen::VectorXd convertPoseToWorldFrame(Eigen::VectorXd pose, int cam_id);
 
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
         void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id);
         
         // Insert new state variable on the filter
-        void insertPosesOnStateVector(Eigen::VectorXd& newState);
+        void insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id);
     
         // Extracting a marker data from the state vector. Overload dedicated to markers
         aruco_msgs::Marker extractDataFromState(trackedMarker data, Eigen::VectorXd filtered_states, Eigen::MatrixXd covariance_matrix);
