@@ -29,9 +29,9 @@ void VisualizationHandler::clear_markers(){
     [](const VisualizationMarker& m){return m.get_marker().header.stamp + m.get_marker().lifetime <= ros::Time::now();}), sys_markers.end());
 }
 
-// Callback method for the camera subscriber
+// Callback method for the markers subscriber
 // Responsible for update the system markers to be published
-void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
+void VisualizationHandler::callback_markers(const aruco_msgs::MarkerArray& msg){
     for(int i = 0; i < msg.markers.size(); i++){
         VisualizationMarker marker_candidate = VisualizationMarker(msg.markers.at(i));
         int marker_index = find_marker(marker_candidate);
@@ -39,27 +39,53 @@ void VisualizationHandler::callback(const aruco_msgs::MarkerArray& msg){
             sys_markers.at(marker_index).set_marker(marker_candidate);
         }
         else{ //Marker not found: Add to the list of markers 
+            ROS_INFO_STREAM("Adding marker " << marker_candidate.get_marker().id);
             sys_markers.push_back(marker_candidate);
         }
     }  
 }
 
-// Add camera to the environment and create the respective  ROS subscriber
-// Checks for repeated frame_id's
-void VisualizationHandler::add_camera(Camera camera, std::string topic){
-    bool flag_repeated_value = false;
-    for(int i  = 0; i < sys_cameras.size(); i++){
-        if(sys_cameras.at(i) == camera){
-            flag_repeated_value = true;
-            ROS_WARN("Camera already exists in the system");
+// Callback method for the camera subscriber
+// Responsible for update the system cameras to be published
+void VisualizationHandler::callback_cameras(const geometry_msgs::PoseArray& msg){
+    for(int i = 0; i < msg.poses.size(); i++){
+        
+        tf::Vector3 tr(msg.poses.at(i).position.x,
+                       msg.poses.at(i).position.y,
+                       msg.poses.at(i).position.z);
+        
+        tf::Quaternion rot(msg.poses.at(i).orientation.x,
+                           msg.poses.at(i).orientation.y,
+                           msg.poses.at(i).orientation.z,
+                           msg.poses.at(i).orientation.w);
+
+        if(i >= sys_cameras.size()){
+            ROS_INFO_STREAM("Adding camera " << i+1);
+            sys_cameras.push_back(Camera(tr, rot, "cam_" + std::to_string(i+1)));  
         }
-    }
-    if(!flag_repeated_value){
-        ROS_INFO_STREAM("Adding camera " << camera.get_frame_id());
-        sys_cameras.push_back(camera);
-        ROS_INFO_STREAM("Subscribing to " << topic << std::endl);
-        sys_subs.push_back(nh.subscribe(topic, 5, &VisualizationHandler::callback, this));
-    }
+        else {
+            sys_cameras.at(i).set_tf(tr, rot);
+        }
+    }  
+}
+
+void VisualizationHandler::start(std::string camera_topic, std::string markers_topic){
+    add_cameras(camera_topic);
+    add_markers(markers_topic);
+}
+
+// create the respective  ROS  camera subscriber
+void VisualizationHandler::add_cameras(std::string topic){
+    ROS_INFO_STREAM("Adding cameras...");
+    ROS_INFO_STREAM("Subscribing to " << topic << std::endl);
+    sys_subs.push_back(nh.subscribe(topic, 5, &VisualizationHandler::callback_cameras, this));
+    
+}
+
+void VisualizationHandler::add_markers(std::string topic){
+    ROS_INFO_STREAM("Adding markers ...");
+    ROS_INFO_STREAM("Subscribing to " << topic << std::endl);
+    sys_subs.push_back(nh.subscribe(topic, 5, &VisualizationHandler::callback_markers, this));
 }
 
 

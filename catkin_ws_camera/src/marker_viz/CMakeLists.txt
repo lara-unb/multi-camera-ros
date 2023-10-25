@@ -133,6 +133,9 @@ include_directories(
 #   src/${PROJECT_NAME}/marker_viz.cpp
 # )
 
+add_library(marker_viz src/marker_viz.cpp)
+add_library(visualization_objects src/visualization_objects.cpp)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -143,9 +146,6 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/marker_viz_node.cpp)
 add_executable(visualization_node src/visualization_node.cpp)
-add_library(camera src/camera.cpp)
-add_library(marker_viz src/marker_viz.cpp)
-add_library(visualization_marker src/visualization_marker.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -162,10 +162,9 @@ add_library(visualization_marker src/visualization_marker.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(visualization_node 
-                      camera
                       marker_viz
                       ${catkin_LIBRARIES}
-                      visualization_marker)
+                      visualization_objects)
 
 #############
 ## Install ##

@@ -5,29 +5,31 @@
 #include <iterator>
 #include <algorithm>
 #include <ros/ros.h>
-#include "visualization_marker.h"
-#include "camera.h"
+#include "visualization_objects.h"
 #include <tf/transform_broadcaster.h>
 #include <aruco_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <unistd.h> // Library effective with Linux
-
+#include <geometry_msgs/PoseArray.h>
 
 class VisualizationHandler{    
-    std::vector<Camera> sys_cameras;
-    std::vector<VisualizationMarker> sys_markers;
-    std::vector<ros::Subscriber> sys_subs;
-    ros::NodeHandle nh;
-    tf::TransformBroadcaster br;
-    ros::Publisher marker_pub;
-    
-    int find_marker(VisualizationMarker m);
-    void callback(const aruco_msgs::MarkerArray& msg);
+    protected:
+        std::vector<Camera> sys_cameras;
+        std::vector<VisualizationMarker> sys_markers;
+        std::vector<ros::Subscriber> sys_subs;
+        ros::NodeHandle nh;
+        tf::TransformBroadcaster br;
+        ros::Publisher marker_pub;
+
+        int find_marker(VisualizationMarker m);
+        void callback_markers(const aruco_msgs::MarkerArray& msg);
+        void callback_cameras(const geometry_msgs::PoseArray& msg);
+        void add_cameras(std::string topic);
+        void add_markers(std::string topic);
     
     public:
         VisualizationHandler(ros::NodeHandle& node_handle);
-        void add_camera(Camera camera, std::string topic);
+        void start(std::string camera_topic, std::string markers_topic);
         void send_tfs();
         void clear_markers();
         void publish_markers();

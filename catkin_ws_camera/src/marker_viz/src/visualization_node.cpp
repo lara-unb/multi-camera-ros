@@ -6,7 +6,7 @@
 int main(int argc, char** argv){
   
   // ROS node configuration
-  ros::init(argc, argv, "test_viz");
+  ros::init(argc, argv, "visualization_node");
   ros::NodeHandle n;
   ros::Rate r(30);
 
@@ -14,13 +14,11 @@ int main(int argc, char** argv){
   
   //Setting the system visualization handler
   VisualizationHandler vh = VisualizationHandler(n);
-  std::vector<std::string>topics = get_camera_topics();
+  std::string camera_topic = "kalman/filtered_cam_poses"; 
+  std::string markers_topic = "kalman/filtered_markers_poses";
   
-  for(int i = 0; i < topics.size(); i++){
-    std::string camera_id = topics.at(i).substr(1,5); // get the "cam_x" token for the respecitve camera from topic path
-    vh.add_camera(Camera(tf::Vector3(0,0,i), tf::Quaternion(0.5,0.5,0.5,0.5),camera_id), topics.at(i)); // Rotate rviz camera axes to coincide with aruco axes
-  }
-
+  vh.start(camera_topic, markers_topic); 
+  
   // Node Loop
   while (ros::ok()){
     vh.clear_markers();

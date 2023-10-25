@@ -24,4 +24,19 @@ class VisualizationMarker{
         void set_pose(tf::Transform new_pose);
 };
 
+class Camera {
+    tf::Transform tf;
+    std::string frame_id; 
+    
+    public:
+        Camera(std::string id);
+        Camera(tf::Vector3 tr, tf::Quaternion rot, std::string id);
+        
+        tf::StampedTransform get_tf_stamped() const ;
+        void set_tf(tf::Vector3 tr, tf::Quaternion rot);
+        bool operator==(const Camera& obj);
+        std::string get_frame_id() const ;    
+
+};
+
 #endif
