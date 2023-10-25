@@ -9,7 +9,7 @@ previous_id(1)
 {
 }
 
-cameraBasis::cameraBasis(int address, Eigen::VectorXd pose, Eigen::MatrixXd cv, tf::Transform tf) :
+cameraBasis::cameraBasis(int address, Eigen::VectorXd pose, Eigen::MatrixXd cv, tf::Transform tf):
 stateVectorAddr(address),
 pose(pose),
 covariance(cv),
