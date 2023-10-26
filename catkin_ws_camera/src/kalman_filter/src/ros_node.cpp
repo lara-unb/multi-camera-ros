@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     ROS_INFO_STREAM("Kalman filter on!");
     filter.getCameraTopics();
     filter.subscribeTopics();
-    ros::Timer timer = filter.createTimer(ros::Duration(0.005));
+    ros::Timer timer = filter.createTimer(ros::Duration(1));
 
     ros::spin();
 

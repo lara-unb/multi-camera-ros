@@ -90,7 +90,7 @@ class RosFilter {
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
         void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id);
 
-        // Insert new state variable on the filter
+        // Insert new marker state variables on the filter and updates camera poses
         void insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id);
 
         // Extracting a marker data from the state vector. Overload dedicated to markers
@@ -100,7 +100,7 @@ class RosFilter {
         geometry_msgs::Pose extractDataFromState(cameraBasis data, Eigen::VectorXd filtered_states);
 
         // Prepare the data to publish them properly
-        void preparePublishData(const std::shared_ptr<aruco_msgs::MarkerArray>& msg, geometry_msgs::PoseArray camera_poses_msg, aruco_msgs::MarkerArray filtered_markers_msg);
+        void preparePublishData(geometry_msgs::PoseArray& camera_poses_msg, aruco_msgs::MarkerArray& filtered_markers_msg);
 
         // Publish filter data on ROS topics
         void publishData(const geometry_msgs::PoseArray camera_poses_msg, const aruco_msgs::MarkerArray filtered_markers_msg);
@@ -110,5 +110,11 @@ class RosFilter {
 
         // Callback to handle filter update event
         void timerCallback(const ros::TimerEvent& event);
+        
+        // Resize the state vector based on the number of objects detected 
+        void resizeState();
+
+        // Resize the state vector based on the number of objects detected, and inserts if there is a base data
+        void resizeState(Eigen::VectorXd newData);
 
 };

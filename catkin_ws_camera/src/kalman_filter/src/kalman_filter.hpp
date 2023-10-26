@@ -94,10 +94,13 @@ class filter{
 			P = auxMatrix;
 
 			ROS_INFO("P-OLD:");
-			for(int i = 0;i < P.cols();i++){
-				for(int j = 0;j < P.rows();j++){
-					ROS_INFO_STREAM(P(i,j));
+			for (int i = 0; i < P.rows(); ++i) {
+				std::string row_str = "[ ";
+				for (int j = 0; j < P.cols(); ++j) {
+					row_str += std::to_string(P(i, j)) + " ";
 				}
+				row_str += "]";
+				ROS_INFO_STREAM(row_str);
 			}
 
 			// Regarding the observation matrix
@@ -121,11 +124,11 @@ class filter{
 			// Regarding the measurement noise covariance matrix
 			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference);
 
-			if(X.rows() == POSE_VECTOR_SIZE){
-				X.setZero();
-				P.setIdentity();
-				Q = Q0;
-			}
+			// if(X.rows() == POSE_VECTOR_SIZE){
+			// 	X.setZero();
+			// 	P.setIdentity();
+			// 	Q = Q0;
+			// }
 
 			ROS_INFO("Q:");
 			for (int i = 0; i < Q.rows(); ++i) {
@@ -168,17 +171,23 @@ class filter{
 		}
 
 		void correct(Eigen::VectorXd Y){
+			ROS_INFO_STREAM("PRE-CORRECT X: " << X);
+
 			// Predicts the output Y with the predicted X
 			Y_pred = H * X;
 
 			//Calculates prediction error (also called measurement innovation or residual)
 			I_pred = Y - Y_pred;
 
+			ROS_INFO_STREAM("PRE-CORRECT I_pred: " << I_pred);
+
 			// Kalman gain
 			K = P * H.transpose() * (H * P * H.transpose() + R).inverse();
 
 			// Updates estimated state matrix with Kalman gain and estimated output error
 			X = X + K * I_pred;
+
+			ROS_INFO_STREAM("POS-CORRECT X: " << X);
 
 			ROS_INFO("K:");
 			for (int i = 0; i < K.rows(); ++i) {
