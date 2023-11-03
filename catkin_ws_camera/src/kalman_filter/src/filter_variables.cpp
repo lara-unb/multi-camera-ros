@@ -24,8 +24,3 @@ void cameraBasis::updateTfPrevious(tf::Transform new_marker_tf, tf::Transform  m
     new_marker_tf = marker_tf_from_previous.inverse() * new_marker_tf; //Pode ser que a ordem esteja invertida 
     previous_tf =  new_marker_tf;
 }
-
-// ESTADOS TESTADOS
-// new_marker_tf * marker_tf_from_previous.inverse();
-//  new_marker_tf.inverse() * marker_tf_from_previous
-//marker_tf_from_previous * new_marker_tf.inverse(); 

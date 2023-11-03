@@ -104,26 +104,6 @@ Eigen::VectorXd RosFilter::msgToPose(geometry_msgs::Pose pose) {
     return tfToPose(transform);
 }
 
-tf::Transform RosFilter::tfToWorldFrame(int this_camera_id){   
-    // ROS_INFO_STREAM(" tfToWorldFrame this_camera_id " << this_camera_id);
-
-    int current_id = this_camera_id;
-    int previous_id = camera_poses[current_id].previous_id;
-    tf::Transform tf_to_base = camera_poses[current_id].previous_tf;
-
-    // ROS_INFO_STREAM("tf_to_base(before) " << tfToPose(tf_to_base));
-
-    while(current_id != previous_id) {
-        // ROS_INFO_STREAM(" tfToWorldFrame previous_id " << previous_id); 
-        tf_to_base = camera_poses[previous_id].previous_tf * tf_to_base;
-        current_id = previous_id;
-        previous_id = camera_poses[current_id].previous_id;
-    }
-
-    // ROS_INFO_STREAM("tf_to_base(after) " << tfToPose(tf_to_base));
-    return tf_to_base;
-}
-
 void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
     int markerTagId = marker.id;
     geometry_msgs::Pose pose = marker.pose.pose;
@@ -166,10 +146,6 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
     }
     else {
         // Marker is being tracked by another camera 
-
-        ROS_INFO_STREAM("camera_id: " << camera_id);
-        ROS_INFO_STREAM("marker_found_camera_id: " << marker_found_camera_id);
-
         // Updates the tf_previous from the camera based on marker pose of the another camera with id lesser than this one (otherwise it would fall on the first if)
         camera_poses[camera_id].updateTfPrevious(poseToTf(poseVector), 
                                                  poseToTf(cam_markers[marker_found_camera_id][marker_index].pose),
@@ -198,35 +174,28 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
 
 void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) {
     std::vector<int> inserted_markers;
+ 
     // Inserts camera and all it's markers observations into the state
-    ROS_INFO("stateVectorAddr: %d", camera_poses[cam_id].stateVectorAddr);
-
-    // Updates camera pose to the world frame
-    ROS_INFO_STREAM( "tf cam " << cam_id << tfToPose(tfToWorldFrame(cam_id).inverse()));
     ROS_INFO_STREAM( "pose cam " << cam_id << camera_poses[cam_id].pose);
 
-    camera_poses[cam_id].pose = tfToPose(tfToWorldFrame(cam_id) * poseToTf(camera_poses[cam_id].pose));
+    int previous_id =  camera_poses[cam_id].previous_id;
+    auto previous_tf = camera_poses[cam_id].previous_tf.inverse();
+
+    camera_poses[cam_id].pose = tfToPose(previous_tf * poseToTf(camera_poses[previous_id].pose));
     newState.segment(camera_poses[cam_id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[cam_id].pose;
 
     ROS_INFO_STREAM( "pose cam posteriori" << cam_id << camera_poses[cam_id].pose);
-
-    for(const auto& marker : cam_markers[cam_id]){
-        ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
-        // Updates marker pose to the world frame
-        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(tfToWorldFrame(cam_id) * poseToTf(marker.pose));
+    for(const auto& marker : cam_markers[cam_id]){  
+        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(poseToTf(marker.pose));
         inserted_markers.push_back(marker.arucoId);                                                                                
     }
 
     // Insert other cameras and their obsevations into the state
     for(const auto& [id, marker_list] : cam_markers) {
         if(id != cam_id) {
-            ROS_INFO("stateVectorAddr: %d", camera_poses[id].stateVectorAddr);
 
-            // Updates camera pose to the world frame
-            ROS_INFO_STREAM("other tf cam " << id << tfToPose(tfToWorldFrame(id).inverse()));
             ROS_INFO_STREAM("other pose cam " << id << camera_poses[id].pose);
 
-            camera_poses[id].pose = tfToPose(tfToWorldFrame(id) * poseToTf(camera_poses[id].pose));
             newState.segment(camera_poses[id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[id].pose;
 
             ROS_INFO_STREAM("other pose cam posteriori" << id << camera_poses[id].pose);
@@ -236,10 +205,7 @@ void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) 
                 if(std::find(inserted_markers.begin(),
                              inserted_markers.end(), 
                              marker.arucoId) == inserted_markers.end()) {
-                    ROS_INFO("stateVectorAddr: %d", marker.stateVectorAddr);
-
-                    // Updates marker pose to the world frame
-                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(tfToWorldFrame(id) * poseToTf(marker.pose));
+                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(poseToTf(marker.pose));
                 }
             }
         }
@@ -269,16 +235,10 @@ aruco_msgs::Marker RosFilter::extractDataFromState(trackedMarker data, Eigen::Ve
         // Populate the filtered_data.pose.covariance with the covariance matrix
         filtered_data.pose.covariance.fill(0.0); // Initialize to zero
 
-        #if DEBUG == true
-        ROS_INFO("covariance_matrix_size: %ld", covariance_matrix.size());
-        ROS_INFO("filtered_data.pose.covariance_size: %ld", filtered_data.pose.covariance.size());
-        #endif
-
         // Extract the corresponding covariance matrix for this marker
         // adding the '-1' part is important because the covariance matrix is 7x7 and the last row and cols relate to the
         // imaginary 'w' rotation which is not really meaningful, and the output is a 6x6 matrix by the format 
         // specified in geometry_msgs
-        ROS_INFO_STREAM("BEfore covariance");
         if (data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.rows()  &&
             data.stateVectorAddr + POSE_VECTOR_SIZE <= covariance_matrix.cols() ) {
             for (int i = 0; i < POSE_VECTOR_SIZE -1; ++i) {
@@ -288,7 +248,6 @@ aruco_msgs::Marker RosFilter::extractDataFromState(trackedMarker data, Eigen::Ve
                 }
             }
         }
-        ROS_INFO_STREAM("after covariance");
     }
     return filtered_data;
 }
@@ -371,9 +330,6 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
                 // Adapt the filter for the new data/change of state vector size
                 Eigen::VectorXd oldState = kf.getState();
 
-                // ROS_INFO_STREAM(tracked_poses);
-                // ROS_INFO_STREAM(oldState);
-
                 // Verifying if there is a need to extend the state vector (new states)
                 if(oldState.size() < tracked_poses * POSE_VECTOR_SIZE) {
                     resizeState();
@@ -381,11 +337,6 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
 
                 Eigen::VectorXd newState(tracked_poses * POSE_VECTOR_SIZE);
                 insertPosesOnStateVector(newState, camera_id);
-
-
-                #if DEBUG == true
-                    ROS_INFO("cam_marker size: %lu", cam_markers[camera_id].size());
-                #endif
 
                 // Filter the data
                 kf.predict();
@@ -420,13 +371,6 @@ Eigen::VectorXd RosFilter::tfToPose(tf::Transform transform) {
                     transform.getRotation().w();
 
     return pose;
-}
-
-Eigen::VectorXd RosFilter::convertPoseToWorldFrame(Eigen::VectorXd pose, int cam_id) { 
-    tf::Transform pose_tf =  poseToTf(pose);
-    tf::Transform tf_to_world_frame = tfToWorldFrame(cam_id);
-    pose_tf =  tf_to_world_frame * pose_tf;
-    return tfToPose(pose_tf);
 }
 
 void RosFilter::resizeState(){

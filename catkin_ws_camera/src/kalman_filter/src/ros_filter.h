@@ -28,6 +28,9 @@ class RosFilter {
         // Create Timer responsible for update the state of the system 
         ros::Timer createTimer(ros::Duration period);
 
+        // Insert a camera on the system for fututre use on the filter
+        void insertCameraBasis(int camera_id);
+
     private:
         // The Kalman filter itself
         filter kf;
@@ -60,9 +63,6 @@ class RosFilter {
         // Saves the last observation published by aruco ros node of each camera and correlate to the camera that observes it
         std::map<int, std::shared_ptr<aruco_msgs::MarkerArray>> last_msgs; 
 
-        // Insert a camera on the system for fututre use on the filter
-        void insertCameraBasis(int camera_id);
-
         // Create the filtered markers publishers and store the references in a map
         void createPublisherFiltered(std::string filtered_marker_topic, ros::NodeHandle nh);
 
@@ -80,12 +80,6 @@ class RosFilter {
 
         // Converts a given pose from tf::Transform to Eigen::VectorXd
         Eigen::VectorXd tfToPose(tf::Transform transform); 
-
-        // Finds the tf that transform the base of a camera to the closest it can to the origin/world (cam_1) (lesser number of cam_x)
-        tf::Transform tfToWorldFrame(int this_camera_id);
-
-        // Applies the transformation from  tfToWorldFrame in the pose
-        Eigen::VectorXd convertPoseToWorldFrame(Eigen::VectorXd pose, int cam_id);
 
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
         void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id);
