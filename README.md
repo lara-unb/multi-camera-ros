@@ -50,3 +50,17 @@ With those libs installed, you can build the entire environment together from th
 
 `catkin_make`
 
+# Run the project
+To run the project, firstly is necessary run the setup script for setup of the plugged cameras on ROS:
+
+`python3 start_cameras.py` 
+
+After that, is necessary run the ROS nodse of the kalman filter and the marker visualziation, given by the following commands, respectively:
+```
+rosrun kalman_filter kalman_filter
+rosrun marker_viz visualization_node
+```
+Finally, the system visualization can be observer running the rviz ROS node:
+
+`rosrun rviz rviz
+`
