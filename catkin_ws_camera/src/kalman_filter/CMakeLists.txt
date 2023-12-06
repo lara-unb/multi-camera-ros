@@ -147,7 +147,7 @@ include_directories(
 add_library(filter_variables src/filter_variables.cpp)
 add_library(ros_filter src/ros_filter.cpp)
 add_executable(ros_kalman_filter src/ros_node.cpp)
-
+add_executable(csv_saver src/csv_saver.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -166,6 +166,8 @@ target_link_libraries(ros_kalman_filter
                       ${catkin_LIBRARIES}
                       ros_filter
                       filter_variables)
+
+target_link_libraries(csv_saver ${catkin_LIBRARIES})           
 
 #############
 ## Install ##

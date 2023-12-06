@@ -110,5 +110,8 @@ class RosFilter {
 
         // Resize the state vector based on the number of objects detected, and inserts if there is a base data
         void resizeState(Eigen::VectorXd newData);
+        
+        // Saves the timestamp and filter covariance main diagonal on a csv file on the readings/filtered folder
+        void saveCovariance();
 
 };

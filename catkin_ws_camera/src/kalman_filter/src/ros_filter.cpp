@@ -2,10 +2,15 @@
 #include <tf/transform_broadcaster.h>
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <cmath>
+#include <filesystem>
 
 RosFilter::RosFilter() {
     // Prepare the filter by defining the initial dimension
     kf.set_dimensions(0);
+    std::filesystem::remove("./readings/filtered/covariance.csv"); //Clears file covariance file
     ROS_INFO("Starting kalman filter aruco node");
 }
 
@@ -281,13 +286,14 @@ void RosFilter::preparePublishData(geometry_msgs::PoseArray& camera_poses_msg, a
 
     for(const auto& [camera_id, camera_basis] : camera_poses){
         camera_msg = extractDataFromState(camera_basis, filtered_states);
-
+        camera_poses_msg.header.stamp = ros::Time::now();
         camera_poses_msg.poses.push_back(camera_msg);
 
         for (const auto& marker : cam_markers[camera_id]) {
             markerAux = extractDataFromState(marker, filtered_states, covariance_matrix);
             // markerAux.header = msg->header; // Use the same header as the input marker data
             markerAux.header.frame_id = "cam_1"; // publish everything related to origin (since the system is suposed to have only same referenced data)
+            markerAux.header.stamp = ros::Time::now();
             filtered_markers_msg.markers.push_back(markerAux);
         }
     }
@@ -316,13 +322,14 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
 
     if(last_msgs.empty()) {
         // Filter the data
-        kf.predict();
+        saveCovariance();
+        kf.predict();    
     }
     else {
-        for (const auto& [camera_id, msg]: last_msgs) {
+        for (const auto& [camera_id, msg]: last_msgs) { 
             if(last_msgs[camera_id] != nullptr) {
                 // Insert the markers detected in the system
-
+                saveCovariance();
                 for (const auto& marker : msg->markers) {
                     insertUpdateMarker(marker, camera_id);
                 }
@@ -340,7 +347,7 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
 
                 // Filter the data
                 kf.predict();
-                kf.correct(newState);
+                kf.correct(newState);   
             }
         }
     }
@@ -395,4 +402,21 @@ void RosFilter::resizeState(Eigen::VectorXd newData){
     // Makes so that the pose's covariance related to the world (initial camera) is 0.
     // ...
     // kf.resetWorld(camera_poses[1].stateVectorAddr);
+}
+
+void RosFilter::saveCovariance(){
+    std::ofstream file;
+    std::string path("./readings/filtered/covariance.csv");
+    file.open(path, std::ios::out | std::ios::app);
+    auto covariance = kf.getCovariance();
+    file <<  ros::Time::now() << ",";   
+    for (int i = 0; i < covariance.rows(); i++)
+    {
+        file << covariance(i,i);
+        if( i < covariance.rows() - 1){
+            file << ",";
+        }
+    }
+    file << "\n";
+    file.close();
 }
