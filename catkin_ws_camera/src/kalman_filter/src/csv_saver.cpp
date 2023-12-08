@@ -10,7 +10,7 @@
 void saveReadingAruco(const aruco_msgs::MarkerArray& msg){
     for(const auto& marker: msg.markers){
         std::ofstream file;
-        std::string path("./readings/unfiltered/markers/m_" + std::to_string(marker.id) + ".csv");
+        std::string path("./readings/unfiltered/markers/m_" + std::to_string(marker.id) + "_" + marker.header.frame_id + ".csv");
         file.open(path, std::ios::out | std::ios::app);
         file << (std::to_string(marker.header.stamp.sec) + "." + std::to_string(marker.header.stamp.nsec)) << ",";
         file << marker.pose.pose.position.x << ","
@@ -45,7 +45,7 @@ void saveReadingKalmanCamera(const geometry_msgs::PoseArray& msg){
 void saveReadingKalmanMarkers(const aruco_msgs::MarkerArray& msg){
     for(const auto& marker: msg.markers){
         std::ofstream file;
-        std::string path("./readings/filtered/markers/m_" + std::to_string(marker.id) + ".csv");
+        std::string path("./readings/filtered/markers/m_" + std::to_string(marker.id) + "_" + marker.header.frame_id + ".csv");
         file.open(path, std::ios::out | std::ios::app);
         file << (std::to_string(marker.header.stamp.sec) + "." + std::to_string(marker.header.stamp.nsec)) << ",";
         file << marker.pose.pose.position.x << ","
