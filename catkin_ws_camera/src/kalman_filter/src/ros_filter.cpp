@@ -52,12 +52,12 @@ ros::Timer RosFilter::createTimer(ros::Duration period) {
 
 void RosFilter::insertCameraBasis(int camera_id) {
     // Verifying if this camera is already tracked. If not, insert in the system
-    tf::Transform tf = tf::Transform(tf::Quaternion(0.5,0.5,0.5,0.5), tf::Vector3(0,0,0));
+    poseTransform tf = poseTransform(tf::Quaternion(0.5,0.5,0.5,0.5), tf::Vector3(0,0,0));
     if(!camera_poses.contains(camera_id)) {
         cameraBasis aux((tracked_poses++) * POSE_VECTOR_SIZE,
                          tfToPose(tf),
                          Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE),
-                         tf::Transform());
+                         poseTransform());
 
         if(camera_id != 1) {
             aux.covariance *= HIGH_COVARIANCE_PRESET;
@@ -89,7 +89,7 @@ int  RosFilter::extractCameraID(const std::string& camera_topic) {
 }
 
 Eigen::VectorXd RosFilter::msgToPose(geometry_msgs::Pose pose) {
-    tf::Transform transform;
+    poseTransform transform;
     tf::Quaternion adjust_rotation, msg_orientation;
     tf::Vector3 msg_pose;
 
@@ -102,10 +102,7 @@ Eigen::VectorXd RosFilter::msgToPose(geometry_msgs::Pose pose) {
                                     pose.orientation.z,
                                     pose.orientation.w);
 
-    transform = tf::Transform(msg_orientation, msg_pose);
-    adjust_rotation = tf::Quaternion(0, 0, 1, 0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
-    auto adjust_rotation_tf =  tf::Transform(adjust_rotation);
-    transform = adjust_rotation_tf * transform;
+    transform = poseTransform(msg_orientation, msg_pose);
     return tfToPose(transform);
 }
 
@@ -130,7 +127,14 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
             break;
         }
     }
-
+    std::cout << " find camera " << camera_id << " found: " << marker_found_camera_id << std::endl; 
+    
+    for(auto it : cam_markers){
+        std::cout << "map camera " << it.first << std::endl;
+        for(auto jt : it.second){
+            std::cout << "marker: " << jt.arucoId << std::endl;
+        }
+    }
     if(marker_index == -1) {
         // The marker is new 
         trackedMarker auxMarker;
@@ -149,13 +153,14 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
         //auxMarker.covariance = Eigen::MatrixXd::Identity() * HIGH_COVARIANCE_PRESET;
 
     }
-    else {
+    else if(marker_found_camera_id){
         // Marker is being tracked by another camera 
         // Updates the tf_previous from the camera based on marker pose of the another camera with id lesser than this one (otherwise it would fall on the first if)
-        camera_poses[camera_id].updateTfPrevious(poseToTf(poseVector), 
+        if(marker_found_camera_id < camera_id){
+            camera_poses[camera_id].updateTfPrevious(poseToTf(poseVector), 
                                                  poseToTf(cam_markers[marker_found_camera_id][marker_index].pose),
                                                  marker_found_camera_id);
-
+        }
         // Checks if the marker already exists in the camera
         auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
                             [markerTagId](const trackedMarker& tracked_marker){
@@ -181,17 +186,18 @@ void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) 
     std::vector<int> inserted_markers;
  
     // Inserts camera and all it's markers observations into the state
-    ROS_INFO_STREAM( "pose cam " << cam_id << camera_poses[cam_id].pose);
-
     int previous_id =  camera_poses[cam_id].previous_id;
     auto previous_tf = camera_poses[cam_id].previous_tf.inverse();
 
     camera_poses[cam_id].pose = tfToPose(previous_tf * poseToTf(camera_poses[previous_id].pose));
+    std::cout << "camera " << cam_id << " POSE: " << camera_poses[cam_id].pose << std::endl; 
     newState.segment(camera_poses[cam_id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[cam_id].pose;
-
-    ROS_INFO_STREAM( "pose cam posteriori" << cam_id << camera_poses[cam_id].pose);
-    for(const auto& marker : cam_markers[cam_id]){  
-        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(poseToTf(marker.pose));
+    
+    auto adjust_rotation = tf::Quaternion(0, 0, 1, 0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
+    auto adjust_rotation_tf =  poseTransform(adjust_rotation);
+    
+    for(const auto& marker : cam_markers[cam_id]){
+        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(adjust_rotation_tf * poseToTf(marker.pose));
         inserted_markers.push_back(marker.arucoId);                                                                                
     }
 
@@ -199,11 +205,7 @@ void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) 
     for(const auto& [id, marker_list] : cam_markers) {
         if(id != cam_id) {
 
-            ROS_INFO_STREAM("other pose cam " << id << camera_poses[id].pose);
-
             newState.segment(camera_poses[id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[id].pose;
-
-            ROS_INFO_STREAM("other pose cam posteriori" << id << camera_poses[id].pose);
 
             for(const auto& marker : marker_list) {
                 // Checks if the marker isn't already inserted by the current camera
@@ -359,23 +361,23 @@ void RosFilter::timerCallback(const ros::TimerEvent& event) {
     last_msgs.clear();
 }
 
-tf::Transform RosFilter::poseToTf( Eigen::VectorXd pose) {
+poseTransform RosFilter::poseToTf( Eigen::VectorXd pose) {
     tf::Vector3 tr(pose(0), pose(1), pose(2));
     tf::Quaternion rot(pose(3), pose(4), pose(5), pose(6));
-    return tf::Transform(rot, tr);
+    return poseTransform(rot, tr);
 }
 
-Eigen::VectorXd RosFilter::tfToPose(tf::Transform transform) {
+Eigen::VectorXd RosFilter::tfToPose(poseTransform transform) {
 
     Eigen::VectorXd pose(7);  // storing the poses in a vector with the format [xt,yt,zt,xr,yr,zr,wr]
 
-    pose << transform.getOrigin().x(),
-                    transform.getOrigin().y(),
-                    transform.getOrigin().z(),
-                    transform.getRotation().x(),
-                    transform.getRotation().y(),
-                    transform.getRotation().z(),
-                    transform.getRotation().w();
+    pose << transform.tf_tr.x(),
+                    transform.tf_tr.y(),
+                    transform.tf_tr.z(),
+                    transform.tf_q.x(),
+                    transform.tf_q.y(),
+                    transform.tf_q.z(),
+                    transform.tf_q.w();
 
     return pose;
 }

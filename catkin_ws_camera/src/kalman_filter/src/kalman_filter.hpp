@@ -24,7 +24,7 @@
 //	K[k] = P[k] * H^{T} * ((H * P[k] * H^{T} + R)^{-1})	// Calculating Kalman gain
 //	X[k] = X[k] + K[k] * (Y[k] - H * X[k])				// after measuring Y[k], calculating a posteriori state estimate
 //	P[k] = (I - K[k] * H) * P[k]						// Calculate a posteriori error covariance estimate
-
+int multiplier = 1;
 class filter{
 
 	public:
@@ -72,7 +72,7 @@ class filter{
 			}
 
 			R.resize(dim, dim);
-			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
+			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE)*multiplier;
 		}
 
 		void resetWorld(int worldAddr){
@@ -122,7 +122,7 @@ class filter{
 			}
 
 			// Regarding the measurement noise covariance matrix
-			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference);
+			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference)*multiplier;
 
 			// if(X.rows() == POSE_VECTOR_SIZE){
 			// 	X.setZero();
@@ -153,7 +153,7 @@ class filter{
 			X = A * X;
 
 			for(int i=0;i < X.size();i++){
-				ROS_INFO("old x%d = %f",i, X[i]);
+				// ROS_INFO("old x%d = %f",i, X[i]);
 			}
 
 			// Predicts Covariance error matrix
@@ -171,7 +171,7 @@ class filter{
 		}
 
 		void correct(Eigen::VectorXd Y){
-			ROS_INFO_STREAM("PRE-CORRECT X:\n" << X);
+			// ROS_INFO_STREAM("PRE-CORRECT X:\n" << X);
 
 			// Predicts the output Y with the predicted X
 			Y_pred = H * X;
@@ -179,8 +179,8 @@ class filter{
 			//Calculates prediction error (also called measurement innovation or residual)
 			I_pred = Y - Y_pred;
 			
-			ROS_INFO_STREAM("PRE-CORRECT Y:\n" << Y);
-			ROS_INFO_STREAM("PRE-CORRECT Y_PRED:\n" << Y_pred);
+			// ROS_INFO_STREAM("PRE-CORRECT Y:\n" << Y);
+			// ROS_INFO_STREAM("PRE-CORRECT Y_PRED:\n" << Y_pred);
 			
 			// Kalman gain
 			K = P * H.transpose() * (H * P * H.transpose() + R).inverse();
@@ -188,7 +188,7 @@ class filter{
 			// Updates estimated state matrix with Kalman gain and estimated output error
 			X = X + K * I_pred;
 
-			ROS_INFO_STREAM("POS-CORRECT X:\n" << X);
+			// ROS_INFO_STREAM("POS-CORRECT X:\n" << X);
 
 			// ROS_INFO("K:");
 			// for (int i = 0; i < K.rows(); ++i) {
@@ -201,11 +201,11 @@ class filter{
 			// }
 
 			for(int i=0;i < I_pred.size();i++){
-				ROS_INFO("i_pred[%d] = %f",i, I_pred[i]);
+				// ROS_INFO("i_pred[%d] = %f",i, I_pred[i]);
 			}
 
 			for(int i=0;i < X.size();i++){
-				ROS_INFO("new x%d = %f",i, X[i]);
+				// ROS_INFO("new x%d = %f",i, X[i]);
 			}
 
 			// Updating covariance error matrix with Kalman gaind and old covariance error matrix

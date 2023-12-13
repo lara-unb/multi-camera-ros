@@ -75,11 +75,11 @@ class RosFilter {
         // Receives a msg with a pose, process it and convert it to eigen::vector
         Eigen::VectorXd msgToPose(geometry_msgs::Pose pose);
 
-       // Converts a given pose from Eigen::VectorXd  to tf::Transform
-        tf::Transform poseToTf(Eigen::VectorXd pose);
+       // Converts a given pose from Eigen::VectorXd  to poseTransform
+        poseTransform poseToTf(Eigen::VectorXd pose);
 
-        // Converts a given pose from tf::Transform to Eigen::VectorXd
-        Eigen::VectorXd tfToPose(tf::Transform transform); 
+        // Converts a given pose from poseTransform to Eigen::VectorXd
+        Eigen::VectorXd tfToPose(poseTransform transform); 
 
         // Evaluate if the marker is already tracked by te system and updates it. If not, creates it
         void insertUpdateMarker(aruco_msgs::Marker marker, int camera_id);
