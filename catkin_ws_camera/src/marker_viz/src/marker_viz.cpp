@@ -93,6 +93,8 @@ void VisualizationHandler::add_markers(std::string topic){
 // TF_translation = [x,y,z]
 // TF_rotation(quaternion) = [x,y,z,w]
 void  VisualizationHandler::send_tfs(){
+    auto map = tf::StampedTransform(tf::Transform(tf::Quaternion(0.5,0.5,0.5,0.5), tf::Vector3(0,0,0)) , ros::Time::now(),"map", "world_aruco");
+    br.sendTransform(map);
     for(auto it = sys_cameras.begin(); it != sys_cameras.end(); it++){
         br.sendTransform(it->get_tf_stamped());
     }

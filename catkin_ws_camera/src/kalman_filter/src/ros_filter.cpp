@@ -52,7 +52,7 @@ ros::Timer RosFilter::createTimer(ros::Duration period) {
 
 void RosFilter::insertCameraBasis(int camera_id) {
     // Verifying if this camera is already tracked. If not, insert in the system
-    poseTransform tf = poseTransform(tf::Quaternion(0.5,0.5,0.5,0.5), tf::Vector3(0,0,0));
+    poseTransform tf = poseTransform(tf::Quaternion(0,0,0,1), tf::Vector3(0,0,0)); // Transformation to convert rviz axis representation to aruco
     if(!camera_poses.contains(camera_id)) {
         cameraBasis aux((tracked_poses++) * POSE_VECTOR_SIZE,
                          tfToPose(tf),
@@ -103,6 +103,9 @@ Eigen::VectorXd RosFilter::msgToPose(geometry_msgs::Pose pose) {
                                     pose.orientation.w);
 
     transform = poseTransform(msg_orientation, msg_pose);
+    adjust_rotation = tf::Quaternion(0,0,1,0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
+    auto adjust_rotation_tf =  poseTransform(adjust_rotation);
+    transform = adjust_rotation_tf * transform;
     return tfToPose(transform);
 }
 
@@ -192,12 +195,9 @@ void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) 
     camera_poses[cam_id].pose = tfToPose(previous_tf * poseToTf(camera_poses[previous_id].pose));
     std::cout << "camera " << cam_id << " POSE: " << camera_poses[cam_id].pose << std::endl; 
     newState.segment(camera_poses[cam_id].stateVectorAddr, POSE_VECTOR_SIZE) = camera_poses[cam_id].pose;
-    
-    auto adjust_rotation = tf::Quaternion(0, 0, 1, 0);   // Rotation on the z axis to adjust to our system from what we receive from aruco_ros
-    auto adjust_rotation_tf =  poseTransform(adjust_rotation);
-    
-    for(const auto& marker : cam_markers[cam_id]){
-        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(adjust_rotation_tf * poseToTf(marker.pose));
+
+    for(const auto& marker : cam_markers[cam_id]){  
+        newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose( poseToTf(camera_poses[cam_id].pose) * poseToTf(marker.pose) );
         inserted_markers.push_back(marker.arucoId);                                                                                
     }
 
@@ -212,7 +212,7 @@ void RosFilter::insertPosesOnStateVector(Eigen::VectorXd& newState, int cam_id) 
                 if(std::find(inserted_markers.begin(),
                              inserted_markers.end(), 
                              marker.arucoId) == inserted_markers.end()) {
-                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose(poseToTf(marker.pose));
+                    newState.segment(marker.stateVectorAddr, POSE_VECTOR_SIZE) = tfToPose( poseToTf(camera_poses[id].pose) * poseToTf(marker.pose));
                 }
             }
         }

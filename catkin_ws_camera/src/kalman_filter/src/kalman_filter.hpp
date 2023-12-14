@@ -24,7 +24,7 @@
 //	K[k] = P[k] * H^{T} * ((H * P[k] * H^{T} + R)^{-1})	// Calculating Kalman gain
 //	X[k] = X[k] + K[k] * (Y[k] - H * X[k])				// after measuring Y[k], calculating a posteriori state estimate
 //	P[k] = (I - K[k] * H) * P[k]						// Calculate a posteriori error covariance estimate
-int multiplier = 1;
+
 class filter{
 
 	public:
@@ -72,7 +72,7 @@ class filter{
 			}
 
 			R.resize(dim, dim);
-			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE)*multiplier;
+			R0 = Eigen::MatrixXd::Identity(POSE_VECTOR_SIZE, POSE_VECTOR_SIZE);
 		}
 
 		void resetWorld(int worldAddr){
@@ -122,7 +122,7 @@ class filter{
 			}
 
 			// Regarding the measurement noise covariance matrix
-			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference)*multiplier;
+			R = Eigen::MatrixXd::Identity(R.rows() + size_difference, R.cols() + size_difference);
 
 			// if(X.rows() == POSE_VECTOR_SIZE){
 			// 	X.setZero();

@@ -126,7 +126,7 @@ Camera::Camera(tf::Vector3 tr, tf::Quaternion rot, std::string id){
 }
 
 tf::StampedTransform Camera::get_tf_stamped() const {
-    return tf::StampedTransform(tf, ros::Time::now(),"map", frame_id);
+    return tf::StampedTransform(tf, ros::Time::now(),"world_aruco", frame_id);
 }
 
 bool Camera::operator==(const Camera& obj){

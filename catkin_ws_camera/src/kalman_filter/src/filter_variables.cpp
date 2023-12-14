@@ -66,4 +66,5 @@ previous_id(1)
 void cameraBasis::updateTfPrevious(poseTransform new_marker_tf, poseTransform  marker_tf_from_previous, int new_previous_id) {
     previous_id = new_previous_id;
     previous_tf = new_marker_tf * marker_tf_from_previous.inverse();
+    previous_tf = previous_tf;
 }
