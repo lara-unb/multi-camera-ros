@@ -48,7 +48,7 @@ To run the project, firstly is necessary run the setup script for setup of the p
 
 After that, is necessary run the ROS nodes of the kalman filter and the marker visualization, given by the following commands, respectively:
 ```
-rosrun kalman_filter kalman_filter
+rosrun kalman_filter ros_kalman_filter
 rosrun marker_viz visualization_node
 ```
 Finally, the system visualization can be observer running the rviz ROS node:
