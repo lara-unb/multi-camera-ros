@@ -7,7 +7,9 @@
 
 #include <aruco_msgs/MarkerArray.h>
 #include <geometry_msgs/PoseArray.h>
+
 #include <geometry_msgs/PoseWithCovariance.h>
+#include <std_srvs/SetBool.h>
 
 
 #include "filter_variables.h"
@@ -30,6 +32,28 @@ class RosFilter {
 
         // Insert a camera on the system for fututre use on the filter
         void insertCameraBasis(int camera_id);
+
+        // Saves the timestamp and filter covariance main diagonal on a csv file on the readings/filtered folder
+        void saveFullLog();
+
+        // Sets up a service to enable or disable logging
+        void setupLoggingService(ros::NodeHandle& nh);
+        bool loggingServiceCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+
+        // Flag to control logging
+        bool logging_enabled = false;
+
+        // Service server for logging control
+        ros::ServiceServer logging_service_server;
+
+        // Save camera logs to separate files
+        void saveCameraLogs();
+
+        // Save marker logs to separate files
+        void saveMarkerLogs();
+
+        // Save unfiltered marker logs to separate files
+        void saveUnfilteredMarkerLogs();
 
     private:
         // The Kalman filter itself
@@ -110,8 +134,5 @@ class RosFilter {
 
         // Resize the state vector based on the number of objects detected, and inserts if there is a base data
         void resizeState(Eigen::VectorXd newData);
-        
-        // Saves the timestamp and filter covariance main diagonal on a csv file on the readings/filtered folder
-        void saveCovariance();
 
 };

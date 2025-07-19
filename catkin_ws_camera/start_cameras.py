@@ -1,50 +1,81 @@
+#!/usr/bin/env python3
 import os
 import time
+import glob
+import sys
+import subprocess
 
 def get_device_type(tokens):
-    if tokens[-3] == 'Xbox':
-        return 'kinect'
-    return 'usb_cam' 
+    return 'kinect' if len(tokens) >= 3 and tokens[-3] == 'Xbox' else 'usb_cam'
 
-error_flag = False
-
-# Run shell commnad and get output 
-output = os.popen("lsusb | grep 'Camera\|Webcam'").read()
+# ── Part 1: Kinect detection (unchanged) ──────────────────────────────────────
+output = os.popen("lsusb | grep 'Camera\\|Webcam\\|Xbox'").read()
 devices = output.splitlines()
 
-# Separate the devices by USB Bus
-all_usb_bus = {}
-num_kinect = 0
-num_usb_cam = 0
-for device in devices:
-    tokens = device.split(' ')
-    bus_id = tokens[1] #Checks Bus ID
-    
-    if bus_id in all_usb_bus: 
-        error_flag = True
-        print("Error: Two Devices can't be connect in the same USB Bus")
-        break
-    else:
-        device_type = get_device_type(tokens)
-        if device_type == 'kinect':
-            num_kinect = num_kinect + 1
-        else:
-            num_usb_cam = num_usb_cam + 1
-            all_usb_bus[bus_id] = device_type #Association between device type and bus for debugging puposes
+num_kinect = sum(1 for d in devices if 'Xbox' in d)
 
-# Launching Camera Nodes based on camera type 
-if not error_flag:
-    cam_id = 1
-    os.system("gnome-terminal --tab --title='rosocore' -- roscore")
-    time.sleep(2)
-    for kinect_id in range(1, num_kinect + 1):
-        os.system(f"gnome-terminal --tab -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=kinect device_id:={kinect_id}")
-        cam_id = cam_id + 1
-        time.sleep(1)
-    for usb_cam_id in range(1, num_usb_cam + 1):
-        os.system(f"gnome-terminal --tab -- roslaunch launch/launch_camera.launch cam_id:={cam_id} cam_type:=usb_cam device_id:={usb_cam_id}")
-        time.sleep(1)
-        cam_id = cam_id + 1
+# ── Part 2: USB camera detection via by-path symlinks ───────────────────────
+v4l_paths = sorted(glob.glob("/dev/v4l/by-path/*-video-index0"))
+num_usb_cam = len(v4l_paths)
 
-    
+if num_usb_cam < 1:
+    print("Error: no USB cameras found! Please plug in at least one.")
+    sys.exit(1)
 
+# ── Part 3: Launch everything ───────────────────────────────────────────────
+cam_id = 1
+
+# 1) start roscore
+print("[INFO] Launching roscore...")
+os.system("gnome-terminal --tab --title='roscore' -- roscore")
+time.sleep(2)
+
+# 2) Kinect nodes
+for kinect_id in range(1, num_kinect + 1):
+    cmd = (
+        f"roslaunch launch/launch_camera.launch "
+        f"cam_id:={cam_id} cam_type:=kinect device_id:={kinect_id}"
+    )
+    print(f"[INFO] {cmd}")
+    os.system(f"gnome-terminal --tab --title='kinect_{kinect_id}' -- {cmd}")
+    cam_id += 1
+    time.sleep(1)
+
+# 3) USB cams
+for usb_symlink in v4l_paths:
+    # resolve symlink → actual /dev/videoX
+    video_dev = os.path.realpath(usb_symlink)
+    print(f"[INFO] Launching cam_id={cam_id} on {video_dev}")
+    # attempt pre‑init, but timeout if it hangs
+    try:
+        print(f"[INFO] Pre‑initializing {video_dev} (5s timeout)...")
+        subprocess.run(
+            ["v4l2-ctl", "-d", video_dev, "--stream-mmap", "--stream-count=1"],
+            timeout=5,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"[WARN] Pre‑init hung on {video_dev}, skipping pre‑init.")
+
+    time.sleep(1)
+
+    # kill any leftover processes on the real device node
+    print(f"[INFO] Releasing {video_dev} if in use...")
+    subprocess.run(["sudo", "fuser", "-k", video_dev],
+                   stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL)
+
+    # now launch
+    cmd = (
+        f"roslaunch launch/launch_camera.launch "
+        f"cam_id:={cam_id} cam_type:=usb_cam device_path:={video_dev}"
+    )
+    print(f"[INFO] {cmd}")
+    os.system(f"gnome-terminal --tab --title='usb_cam_{cam_id}' -- {cmd}")
+
+    # give ample time for driver to settle
+    time.sleep(3)
+    cam_id += 1
+
+print(f"[INFO] Launched {num_kinect + num_usb_cam} camera nodes.")
+sys.exit(0)

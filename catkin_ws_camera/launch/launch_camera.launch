@@ -1,42 +1,48 @@
 <launch>
-    <arg name="cam_id" default="1"/>
-    <arg name="cam_type" default="usb_cam"/>
-    <arg name="device_id" default="1"/>
+  <!-- common args -->
+  <arg name="cam_id"      default="1"/>
+  <arg name="cam_type"    default="usb_cam"/>
+  <arg name="device_path" default="/dev/video0"/>
+  <arg name="device_id" default="1"/>
 
-    <group ns="$(eval 'cam_' + str(arg('cam_id')))" if="$(eval arg('cam_type') == 'kinect')">
-        <arg name="kinect_device_id" value="$(eval '#' + str(arg('device_id')))"/>
+  <!-- Kinect branch (only the Kinect driver) -->
+  <group ns="$(eval 'cam_' + str(arg('cam_id')))"
+         if="$(eval arg('cam_type') == 'kinect')">
+    <arg name="kinect_device_id" value="$(arg device_id)"/>
+    <include file="$(find freenect_launch)/launch/freenect.launch">
+      <arg name="device_id" value="$(arg kinect_device_id)"/>
+    </include>
+  </group>
 
-        <include file="$(find freenect_launch)/launch/freenect.launch">
-            <arg name="device_id" value="$(arg kinect_device_id)"/>
+  <!-- USB‑cam branch (only the usb_cam node) -->
+  <group ns="$(eval 'cam_' + str(arg('cam_id')))"
+         if="$(eval arg('cam_type') == 'usb_cam')">
+    <arg name="usb_cam_device_id" value="$(eval arg('device_id') - 1)"/>
+    <group ns="camera">
+        <node name="rgb"
+            pkg="usb_cam"
+            type="usb_cam_node"
+            output="screen">
+            <param name="video_device"  value="$(arg device_path)"/>
+            <param name="image_width"   value="640"/>
+            <param name="image_height"  value="480"/>
+            <param name="pixel_format"  value="yuyv"/>
+            <param name="framerate"     value="30"/>
+            <param name="camera_frame_id"
+                value="$(eval 'cam_' + str(arg('cam_id')) + '_usb_cam')"/>
+            <param name="io_method"     value="mmap"/>
+        </node>
+        <include file="./launch/marker_publisher.launch">
+            <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
         </include>
-
-        <group ns = "camera">
-            <include file="./launch/marker_publisher.launch">
-                <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
-            </include>
-        </group>    
-
     </group>
 
-    <group ns="$(eval 'cam_' + str(arg('cam_id')))" if="$(eval arg('cam_type') == 'usb_cam')">
-        <arg name="usb_cam_device_id" value="$(eval arg('device_id') - 1)"/>
-        <group ns="camera">
-
-            <node name="rgb" pkg="usb_cam" type="usb_cam_node" output="screen" >
-                <param name="video_device" value="/dev/video$(arg usb_cam_device_id)" />
-                <param name="image_width" value="640" />
-                <param name="image_height" value="480" />
-                <param name="pixel_format" value="yuyv" />
-                <param name="framerate" value="30" />
-                <param name="camera_frame_id" value="$(eval 'cam_' + str(arg('cam_id')) + ' usb_cam')" />
-                <param name="io_method" value="mmap"/>
-            </node>
-
-            <include file="./launch/marker_publisher.launch">
-                <arg name="cam_id" value="$(eval 'cam_' + str(arg('cam_id')))"/>
-            </include>
-        </group>
-    </group>
-
-
+    <!-- Add relay nodes to clone topics to flattened namespace -->
+    <node pkg="topic_tools" type="relay" name="relay_img"
+          output="screen"
+          args="/cam_$(arg cam_id)/camera/rgb/image_raw /cam_$(arg cam_id)/image_raw"/>
+    <node pkg="topic_tools" type="relay" name="relay_info"
+          output="screen"
+          args="/cam_$(arg cam_id)/camera/rgb/camera_info /cam_$(arg cam_id)/camera_info"/>
+  </group>
 </launch>

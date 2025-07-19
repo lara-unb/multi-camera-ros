@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cmath>
 #include <filesystem>
+#include <std_srvs/SetBool.h>
 
 RosFilter::RosFilter() {
     // Prepare the filter by defining the initial dimension
@@ -163,6 +164,7 @@ void RosFilter::insertUpdateMarker(aruco_msgs::Marker marker, int camera_id) {
             camera_poses[camera_id].updateTfPrevious(poseToTf(poseVector), 
                                                  poseToTf(cam_markers[marker_found_camera_id][marker_index].pose),
                                                  marker_found_camera_id);
+            camera_poses[camera_id].previous_id = marker_found_camera_id; 
         }
         // Checks if the marker already exists in the camera
         auto it = std::find_if(cam_markers[camera_id].begin(), cam_markers[camera_id].end(),
@@ -318,20 +320,42 @@ void RosFilter::cameraCallback(const aruco_msgs::MarkerArray::ConstPtr& msg, con
     *p = *msg;
 }
 
+bool RosFilter::loggingServiceCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res) {
+    logging_enabled = req.data;
+    res.success = true;
+    res.message = logging_enabled ? "Logging enabled" : "Logging disabled";
+    return true;
+}
+
+void RosFilter::setupLoggingService(ros::NodeHandle& nh) {
+    logging_enabled = false;
+    logging_service_server = nh.advertiseService("/start_logging", &RosFilter::loggingServiceCallback, this);
+}
+
 void RosFilter::timerCallback(const ros::TimerEvent& event) {
     geometry_msgs::PoseArray camera_poses_msg;
     aruco_msgs::MarkerArray filtered_markers_msg;
 
     if(last_msgs.empty()) {
         // Filter the data
-        saveCovariance();
+        if(logging_enabled) {
+            saveFullLog();
+            saveCameraLogs();
+            saveMarkerLogs();
+            saveUnfilteredMarkerLogs();
+        }
         kf.predict();    
     }
     else {
         for (const auto& [camera_id, msg]: last_msgs) { 
             if(last_msgs[camera_id] != nullptr) {
                 // Insert the markers detected in the system
-                saveCovariance();
+                if(logging_enabled) {
+                    saveFullLog();
+                    saveCameraLogs();
+                    saveMarkerLogs();
+                    saveUnfilteredMarkerLogs();
+                }
                 for (const auto& marker : msg->markers) {
                     insertUpdateMarker(marker, camera_id);
                 }
@@ -406,19 +430,108 @@ void RosFilter::resizeState(Eigen::VectorXd newData){
     // kf.resetWorld(camera_poses[1].stateVectorAddr);
 }
 
-void RosFilter::saveCovariance(){
+void RosFilter::saveFullLog(){
     std::ofstream file;
-    std::string path("./readings/filtered/covariance.csv");
+    std::string path("./readings/filtered/full_log.csv");
     file.open(path, std::ios::out | std::ios::app);
     auto covariance = kf.getCovariance();
-    file <<  ros::Time::now() << ",";   
-    for (int i = 0; i < covariance.rows(); i++)
-    {
-        file << covariance(i,i);
-        if( i < covariance.rows() - 1){
-            file << ",";
-        }
+    auto state = kf.getState();
+
+    // Save timestamp
+    file << ros::Time::now() << ",";
+
+    // Save state vector (all poses: cameras and markers)
+    for (int i = 0; i < state.size(); i++) {
+        file << state(i);
+        if (i < state.size() - 1) file << ",";
     }
+
+    // Save diagonal covariance
+    file << ",";
+    for (int i = 0; i < covariance.rows(); i++) {
+        file << covariance(i, i);
+        if (i < covariance.rows() - 1) file << ",";
+    }
+
+    // Save filter parameters (example: process noise, measurement noise)
+    // If you have these as member variables, add them here. Replace with actual variable names.
+    // file << "," << kf.getProcessNoise() << "," << kf.getMeasurementNoise();
+
     file << "\n";
     file.close();
+}
+
+void RosFilter::saveCameraLogs() {
+    Eigen::VectorXd state = kf.getState();
+    Eigen::MatrixXd covariance = kf.getCovariance();
+    ros::Time now = ros::Time::now();
+    for (const auto& [camera_id, camera_basis] : camera_poses) {
+        std::string path = "/home/gtambara/Desktop/multi-camera-ros/catkin_ws_camera/readings/filtered/camera/camera_" + std::to_string(camera_id) + ".csv";
+        std::ofstream file(path, std::ios::out | std::ios::app);
+        int addr = camera_basis.stateVectorAddr;
+        // Position and orientation
+        file << now << ",";
+        for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
+            file << state(addr + i);
+            if (i < POSE_VECTOR_SIZE - 1) file << ",";
+        }
+        // Covariance (diagonal)
+        file << ",";
+        for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
+            file << covariance(addr + i, addr + i);
+            if (i < POSE_VECTOR_SIZE - 1) file << ",";
+        }
+        file << "\n";
+        file.close();
+    }
+}
+
+void RosFilter::saveMarkerLogs() {
+    Eigen::VectorXd state = kf.getState();
+    Eigen::MatrixXd covariance = kf.getCovariance();
+    ros::Time now = ros::Time::now();
+    // Save only one entry per unique marker (filtered result)
+    std::set<int> saved_ids;
+    for (const auto& [camera_id, marker_list] : cam_markers) {
+        for (const auto& marker : marker_list) {
+            if (saved_ids.count(marker.arucoId) == 0) {
+                std::string path = "/home/gtambara/Desktop/multi-camera-ros/catkin_ws_camera/readings/filtered/markers/marker_" + std::to_string(marker.arucoId) + ".csv";
+                std::ofstream file(path, std::ios::out | std::ios::app);
+                int addr = marker.stateVectorAddr;
+                // Position and orientation
+                file << now << ",";
+                for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
+                    file << state(addr + i);
+                    if (i < POSE_VECTOR_SIZE - 1) file << ",";
+                }
+                // Covariance (diagonal)
+                file << ",";
+                for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
+                    file << covariance(addr + i, addr + i);
+                    if (i < POSE_VECTOR_SIZE - 1) file << ",";
+                }
+                file << "\n";
+                file.close();
+                saved_ids.insert(marker.arucoId);
+            }
+        }
+    }
+}
+
+void RosFilter::saveUnfilteredMarkerLogs() {
+    ros::Time now = ros::Time::now();
+    for (const auto& [camera_id, marker_list] : cam_markers) {
+        for (const auto& marker : marker_list) {
+            std::string path = "/home/gtambara/Desktop/multi-camera-ros/catkin_ws_camera/readings/unfiltered/markers/marker_" + std::to_string(marker.arucoId) + "_cam_" + std::to_string(camera_id) + ".csv";
+            std::ofstream file(path, std::ios::out | std::ios::app);
+            // Position and orientation (unfiltered)
+            file << now << ",";
+            for (int i = 0; i < POSE_VECTOR_SIZE; ++i) {
+                file << marker.pose(i);
+                if (i < POSE_VECTOR_SIZE - 1) file << ",";
+            }
+            file << "\n";
+            file.close();
+        }
+    }
 }
