@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+
+  multi-camera-ros:
+    build: .
+    container_name: multi-camera-ros
+
+    network_mode: host
+    privileged: true
+
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+
+    volumes:
+      - ./catkin_ws_camera:/root/catkin_ws_camera
+      - /tmp/.X11-unix:/tmp/.X11-unix
+
+    stdin_open: true
+    tty: true
